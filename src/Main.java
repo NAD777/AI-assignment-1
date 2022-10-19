@@ -1,11 +1,4 @@
-import javax.crypto.Cipher;
-import javax.naming.InsufficientResourcesException;
-import javax.swing.plaf.BorderUIResource;
-import java.io.File;
-import java.io.PrintStream;
-import java.security.interfaces.RSAKey;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.PriorityQueue;
 
 import static java.lang.Math.*;
@@ -25,8 +18,8 @@ final class Constants {
 }
 
 class Tuple<T> {
-    private T x;
-    private T y;
+    private final T x;
+    private final T y;
 
     Tuple(T x, T y) {
         this.x = x;
@@ -42,7 +35,8 @@ class Tuple<T> {
     }
 
     void pprint() {
-        System.out.printf("x: %d, y: %d\n", x, y);
+        System.out.println(x);
+        System.out.println(y);
     }
 }
 
@@ -68,6 +62,7 @@ class State {
 
     State(int current_x, int current_y, boolean cask, boolean kraken_is_dead, int path_length) {
         this(current_x, current_y, cask);
+        this.kraken_is_dead = kraken_is_dead;
         this.path_length = path_length;
     }
 
@@ -79,7 +74,7 @@ class State {
 class Board {
     public int rows;
     public int columns;
-    public char[][] board;
+    private final char[][] board;
 
     public int finish_x;
     public int finish_y;
@@ -87,6 +82,13 @@ class Board {
     public int from_y;
     public int tortuga_x;
     public int tortuga_y;
+
+    Character getPiece(int x, int y) {
+        if(isValidCoordinates(x, y)) {
+            return board[x][y];
+        }
+        return null;
+    }
 
     Board(int rows, int columns) {
         this.rows = rows;
@@ -103,6 +105,30 @@ class Board {
 
     boolean isValidCoordinates(int x, int y) {
         return 0 <= x && x < rows && 0 <= y && y < columns;
+    }
+
+    /**
+     * Tests for ability to kill Kraken
+     * @param x coordinate
+     * @param y coordinate
+     * @return true if in this cell is kraken "heart" (so, we can kill him) else false
+     */
+    boolean isKrakenHeart(int x, int y) {
+        char piece = getPiece(x, y);
+        return piece == Constants.KRAKEN_CELL ||
+                piece == Constants.KRAKEN_WITH_ROCK;
+    }
+
+    /**
+     * Tests for Kraken cell
+     * @param x coordinate
+     * @param y coordinate
+     * @return true if in this cell is Kraken's perception zone or Kraken "heart" cell
+     */
+    boolean isKrakenCell(int x, int y) {
+        char piece = getPiece(x, y);
+        return piece == Constants.KRAKEN_CELL ||
+                piece == Constants.KRAKEN;
     }
 
     boolean isEnemy(int x, int y) {
@@ -127,11 +153,11 @@ class Board {
     }
 
     public void setKraken(int x, int y) {
-        ArrayList<Tuple<Integer>> shifts = new ArrayList<Tuple<Integer>>();
-        shifts.add(new Tuple<Integer>(1, 0));
-        shifts.add(new Tuple<Integer>(-1, 0));
-        shifts.add(new Tuple<Integer>(0, 1));
-        shifts.add(new Tuple<Integer>(0, -1));
+        ArrayList<Tuple<Integer>> shifts = new ArrayList<>();
+        shifts.add(new Tuple<>(1, 0));
+        shifts.add(new Tuple<>(-1, 0));
+        shifts.add(new Tuple<>(0, 1));
+        shifts.add(new Tuple<>(0, -1));
 
         char setChar = Constants.KRAKEN_CELL;
         if (board[x][y] == Constants.ROCK) {
@@ -142,8 +168,8 @@ class Board {
     }
 
     public void setRock(int x, int y) {
-        ArrayList<Tuple<Integer>> shifts = new ArrayList<Tuple<Integer>>();
-        shifts.add(new Tuple<Integer>(0, 0));
+        ArrayList<Tuple<Integer>> shifts = new ArrayList<>();
+        shifts.add(new Tuple<>(0, 0));
 
         char setChar = 'R';
         if (board[x][y] == Constants.KRAKEN_CELL) {
@@ -153,8 +179,8 @@ class Board {
     }
 
     public void setTortuga(int x, int y) {
-        ArrayList<Tuple<Integer>> shifts = new ArrayList<Tuple<Integer>>();
-        shifts.add(new Tuple<Integer>(0, 0));
+        ArrayList<Tuple<Integer>> shifts = new ArrayList<>();
+        shifts.add(new Tuple<>(0, 0));
         tortuga_x = x;
         tortuga_y = y;
         setObj(x, y, shifts, Constants.TORTUGA);
@@ -163,23 +189,23 @@ class Board {
     public void setChest(int x, int y) {
         finish_x = x;
         finish_y = y;
-        ArrayList<Tuple<Integer>> shifts = new ArrayList<Tuple<Integer>>();
+        ArrayList<Tuple<Integer>> shifts = new ArrayList<>();
         shifts.add(new Tuple<Integer>(0, 0));
 
         setObj(x, y, shifts, Constants.CHEST);
     }
 
     public void setDevy(int x, int y) {
-        ArrayList<Tuple<Integer>> shifts = new ArrayList<Tuple<Integer>>();
-        shifts.add(new Tuple<Integer>(1, 0));
-        shifts.add(new Tuple<Integer>(-1, 0));
-        shifts.add(new Tuple<Integer>(0, 1));
-        shifts.add(new Tuple<Integer>(0, -1));
+        ArrayList<Tuple<Integer>> shifts = new ArrayList<>();
+        shifts.add(new Tuple<>(1, 0));
+        shifts.add(new Tuple<>(-1, 0));
+        shifts.add(new Tuple<>(0, 1));
+        shifts.add(new Tuple<>(0, -1));
 
-        shifts.add(new Tuple<Integer>(1, 1));
-        shifts.add(new Tuple<Integer>(-1, 1));
-        shifts.add(new Tuple<Integer>(-1, -1));
-        shifts.add(new Tuple<Integer>(1, -1));
+        shifts.add(new Tuple<>(1, 1));
+        shifts.add(new Tuple<>(-1, 1));
+        shifts.add(new Tuple<>(-1, -1));
+        shifts.add(new Tuple<>(1, -1));
 
         setObj(x, y, shifts, Constants.DAVY);
     }
@@ -192,15 +218,14 @@ class Board {
 
     // Mark: supporting functions
     private void setObj(int x, int y, ArrayList<Tuple<Integer>> shifts, char sym) {
-        for (int i = 0; i < shifts.size(); i++) {
-            int new_x = x + shifts.get(i).getX();
-            int new_y = y + shifts.get(i).getY();
+        for (Tuple<Integer> shift : shifts) {
+            int new_x = x + shift.getX();
+            int new_y = y + shift.getY();
             if (isValidCoordinates(new_x, new_y)) {
                 board[new_x][new_y] = sym;
             }
         }
     }
-
 
     void createSampleBoard() { // given example
         this.setPlayer(0, 0);
@@ -239,21 +264,6 @@ class Board {
         this.setTortuga(8, 8);
     }
 
-//    public void printBoard() {
-//        System.out.printf("  ");
-//        for (int i = 0; i < rows; i++) {
-//            System.out.printf("%20d ", i);
-//        }
-//        System.out.printf("\n");
-//        for (int i = 0; i < rows; i++) {
-//            System.out.printf("%d ", i);
-//            for (int j = 0; j < columns; j++) {
-//                System.out.printf("%20c ", board[i][j]);
-//            }
-//            System.out.printf("\n");
-//        }
-//    }
-
     public void printBoard() {
         System.out.printf("  ");
         for (int i = 0; i < rows; i++) {
@@ -273,23 +283,22 @@ class Board {
 interface SearchAlgorithm {
     Result solve(int from_x, int from_y, int finish_x, int finish_y, ArrayList<Tuple<Integer>> shifts, Board board);
     default ArrayList<Tuple<Integer>> getPath(int from_x, int from_y, int finish_x, int finish_y, int[][] map, ArrayList<Tuple<Integer>> shifts) {
-        ArrayList<Tuple<Integer>> ans = new ArrayList<Tuple<Integer>>();
-
+        ArrayList<Tuple<Integer>> ans = new ArrayList<>();
         int x = finish_x;
         int y = finish_y;
 
         while (x != from_x || y != from_y) {
             boolean flag = false;
-            for (int i = 0; i < shifts.size(); i++) {
-                int new_x = x + shifts.get(i).getX();
-                int new_y = y + shifts.get(i).getY();
+            for (Tuple<Integer> shift : shifts) {
+                int new_x = x + shift.getX();
+                int new_y = y + shift.getY();
 
                 if (!(0 <= new_x && new_x < map.length && 0 <= new_y && new_y < map[0].length)) {
                     continue;
                 }
 
                 if (map[new_x][new_y] + 1 == map[x][y]) {
-                    ans.add(0, new Tuple<Integer>(x, y));
+                    ans.add(0, new Tuple<>(x, y));
                     x = new_x;
                     y = new_y;
                     flag = true;
@@ -300,9 +309,10 @@ interface SearchAlgorithm {
                 return null;
             }
         }
-        ans.add(0, new Tuple<Integer>(from_x, from_y));
+        ans.add(0, new Tuple<>(from_x, from_y));
         return ans;
     }
+//    default tryKillKraken()
     int getPathLength();
 }
 
@@ -328,6 +338,7 @@ class AStar implements SearchAlgorithm {
     ArrayList<Tuple<Integer>> shifts;
     Board board;
     int[][] map;
+    char [][] pathMap;
 
     private int pathLength;
 
@@ -335,9 +346,7 @@ class AStar implements SearchAlgorithm {
 
     static class Node implements Comparable {
         State state;
-        int g;
-        int h;
-        int f;
+        int g, h, f;
 
         Node(State state, int g, int h) {
             f = g + h;
@@ -359,28 +368,28 @@ class AStar implements SearchAlgorithm {
         return pathLength;
     }
     int h(int from_x, int from_y, int finish_x, int finish_y) {
-        int f_x = from_x, f_y = from_y, to_x = finish_x, to_y = finish_y;
+        int f_x = from_x, f_y = from_y;
         int diag = min(abs(finish_x - from_x), abs(finish_y - from_y));
 
-        if (f_x < to_x && f_y < to_y) {
+        if (f_x < finish_x && f_y < finish_y) {
             f_x += diag;
             f_y += diag;
         }
 
-        if (f_x > to_x && f_y < to_y) {
+        if (f_x > finish_x && f_y < finish_y) {
             f_x -= diag;
             f_y += diag;
         }
-        if (f_x < to_x && f_y > to_y) {
+        if (f_x < finish_x && f_y > finish_y) {
             f_x += diag;
             f_y -= diag;
         }
-        if (f_x > to_x && f_y > to_y) {
+        if (f_x > finish_x && f_y > finish_y) {
             f_x -= diag;
             f_y -= diag;
         }
 
-        return diag + max(abs(to_x - f_x), abs(to_y - f_y));
+        return diag + max(abs(finish_x - f_x), abs(finish_y - f_y));
     }
 
     public Result solve(int from_x, int from_y, int finish_x, int finish_y, ArrayList<Tuple<Integer>> shifts, Board board) {
@@ -429,7 +438,7 @@ class AStar implements SearchAlgorithm {
                     if (!board.isValidCoordinates(new_x, new_y)) {
                         continue;
                     }
-                    if ((board.board[new_x][new_y] == Constants.KRAKEN_CELL || board.board[new_x][new_y] == Constants.KRAKEN_WITH_ROCK) && state.cask) {
+                    if (board.isKrakenHeart(new_x, new_y) && state.cask) {
                         state.kraken_is_dead = true;
                         break;
                     }
@@ -437,24 +446,14 @@ class AStar implements SearchAlgorithm {
             }
 
             for (int i = 0; i < shifts.size(); i++) {
-                int dx = shifts.get(i).getX();
-                int dy = shifts.get(i).getY();
-
-                int new_x = current_x + dx;
-                int new_y = current_y + dy;
+                int new_x = current_x + shifts.get(i).getX();
+                int new_y = current_y + shifts.get(i).getY();
 
                 if (!board.isValidCoordinates(new_x, new_y)) {
                     continue;
                 }
-                boolean go_here = false;
-                if (((board.board[new_x][new_y] == Constants.KRAKEN || board.board[new_x][new_y] == Constants.KRAKEN_CELL) && state.kraken_is_dead)) {
-                    go_here = true;
-                }
-                if (!board.isEnemy(new_x, new_y)) {
-                    go_here = true;
-                }
 
-                if (!go_here) {
+                if (!((board.isKrakenCell(new_x, new_y) && state.kraken_is_dead) || !board.isEnemy(new_x, new_y))) {
                     continue;
                 }
 
@@ -475,12 +474,6 @@ class BackTracking implements SearchAlgorithm {
     private int pathLength;
     ArrayList<Tuple<Integer>> path;
 
-    private void solvePrivate(ArrayList<Tuple<Integer>> shifts, int[][] map) {
-        State start = new State(from_x, from_y);
-
-        this.backTrackingSearch(start);
-    }
-
     public Result solve(int from_x, int from_y, int finish_x, int finish_y, ArrayList<Tuple<Integer>> shifts, Board board) {
         this.from_x = from_x;
         this.from_y = from_y;
@@ -496,9 +489,12 @@ class BackTracking implements SearchAlgorithm {
                 map[i][j] = Constants.INF;
             }
         }
-        solvePrivate(shifts, map);
+        State start = new State(from_x, from_y);
+        backTrackingSearch(start);
         pathLength = map[finish_x][finish_y];
-        path = getPath(this.from_x, this.from_y, this.finish_x, this.finish_y, this.map, this.shifts);
+        if(pathLength != Constants.INF) {
+            path = getPath(this.from_x, this.from_y, this.finish_x, this.finish_y, this.map, this.shifts);
+        }
 
         return new Result(pathLength, path);
     }
@@ -518,47 +514,37 @@ class BackTracking implements SearchAlgorithm {
             return;
         }
 
-        if (board.board[current_x][current_y] == Constants.TORTUGA) {
+        if (board.getPiece(current_x, current_y) == Constants.TORTUGA) {
             state.cask = true;
         }
 
         if (!state.kraken_is_dead && state.cask) {
-            ArrayList<Tuple<Integer>> for_kill_kraken = new ArrayList<Tuple<Integer>>();
-            for_kill_kraken.add(new Tuple<Integer>(1, 1));
-            for_kill_kraken.add(new Tuple<Integer>(-1, 1));
-            for_kill_kraken.add(new Tuple<Integer>(-1, -1));
-            for_kill_kraken.add(new Tuple<Integer>(1, -1));
-
-            for (int i = 0; i < for_kill_kraken.size(); i++) {
-                int new_x = current_x + for_kill_kraken.get(i).getX();
-                int new_y = current_y + for_kill_kraken.get(i).getY();
+            for (Tuple<Integer> shift : shifts) {
+                int new_x = current_x + shift.getX();
+                int new_y = current_y + shift.getY();
                 if (!board.isValidCoordinates(new_x, new_y)) {
                     continue;
                 }
-                if ((board.board[new_x][new_y] == Constants.KRAKEN_CELL || board.board[new_x][new_y] == Constants.KRAKEN_WITH_ROCK) && state.cask) {
+                if (board.isKrakenHeart(new_x, new_y) && state.cask) {
                     state.kraken_is_dead = true;
                     break;
                 }
             }
         }
 
-        for (int i = 0; i < shifts.size(); i++) {
-            int new_x = current_x + shifts.get(i).getX();
-            int new_y = current_y + shifts.get(i).getY();
+        for (Tuple<Integer> shift : shifts) {
+            int new_x = current_x + shift.getX();
+            int new_y = current_y + shift.getY();
 
             if (!board.isValidCoordinates(new_x, new_y)) {
                 continue;
             }
-            if ((board.board[new_x][new_y] == Constants.KRAKEN || board.board[new_x][new_y] == Constants.KRAKEN_CELL) && state.kraken_is_dead) {
+
+            if ((board.isKrakenCell(new_x, new_y) && state.kraken_is_dead) || !board.isEnemy(new_x, new_y)) {
                 if (map[new_x][new_y] > state.path_length + 1) {
                     backTrackingSearch(state.move(new_x, new_y));
                 }
 
-            }
-            if (!board.isEnemy(new_x, new_y)) {
-                if (map[new_x][new_y] > state.path_length + 1) {
-                    backTrackingSearch(state.move(new_x, new_y));
-                }
             }
         }
     }
@@ -569,21 +555,6 @@ class BackTracking implements SearchAlgorithm {
     }
 }
 public class Main {
-    char[][] getPathMap(ArrayList<Tuple<Integer>> path, int rows, int columns) {
-        char[][] ans_map = new char[rows][columns];
-        for (int i = 0; i < rows; i++) {
-            for (int j = 0; j < columns; j++) {
-                ans_map[i][j] = Constants.BLANK;
-            }
-        }
-        for (int i = 0; i < path.size(); i++) {
-            int x = path.get(i).getX();
-            int y = path.get(i).getY();
-            ans_map[x][y] = Constants.PATH;
-        }
-        return ans_map;
-    }
-
     void printMap(char[][] map) {
         System.out.printf("-------------------\n");
         System.out.printf("  ");
@@ -601,17 +572,32 @@ public class Main {
         System.out.printf("-------------------\n");
     }
 
-    void solve(Board board, SearchAlgorithm algorithm) {
-        ArrayList<Tuple<Integer>> shifts = new ArrayList<Tuple<Integer>>();
-        shifts.add(new Tuple<Integer>(1, 0));
-        shifts.add(new Tuple<Integer>(-1, 0));
-        shifts.add(new Tuple<Integer>(0, 1));
-        shifts.add(new Tuple<Integer>(0, -1));
+    char[][] getPathMap(ArrayList<Tuple<Integer>> path, int rows, int columns) {
+        char[][] ans_map = new char[rows][columns];
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < columns; j++) {
+                ans_map[i][j] = Constants.BLANK;
+            }
+        }
+        for (Tuple<Integer> integerTuple : path) {
+            int x = integerTuple.getX();
+            int y = integerTuple.getY();
+            ans_map[x][y] = Constants.PATH;
+        }
+        return ans_map;
+    }
 
-        shifts.add(new Tuple<Integer>(1, 1));
-        shifts.add(new Tuple<Integer>(-1, 1));
-        shifts.add(new Tuple<Integer>(-1, -1));
-        shifts.add(new Tuple<Integer>(1, -1));
+    void solve(Board board, SearchAlgorithm algorithm) {
+        ArrayList<Tuple<Integer>> shifts = new ArrayList<>();
+        shifts.add(new Tuple<>(1, 0));
+        shifts.add(new Tuple<>(-1, 0));
+        shifts.add(new Tuple<>(0, 1));
+        shifts.add(new Tuple<>(0, -1));
+
+        shifts.add(new Tuple<>(1, 1));
+        shifts.add(new Tuple<>(-1, 1));
+        shifts.add(new Tuple<>(-1, -1));
+        shifts.add(new Tuple<>(1, -1));
 
         // direct path to chest
         Result direct = algorithm.solve(board.from_x, board.from_y, board.finish_x, board.finish_y, shifts, board);
@@ -620,7 +606,8 @@ public class Main {
         Result toTortuga = algorithm.solve(board.from_x, board.from_y, board.tortuga_x, board.tortuga_y, shifts, board);
         Result fromTortugaToFinish = algorithm.solve(board.tortuga_x, board.tortuga_y, board.finish_x, board.finish_y, shifts, board);
 
-        if(direct.getPathLength() == Constants.INF && (toTortuga.getPathLength() == Constants.INF || fromTortugaToFinish.getPathLength() == Constants.INF)) {
+        if(direct.getPathLength() == Constants.INF &&
+                (toTortuga.getPathLength() == Constants.INF || fromTortugaToFinish.getPathLength() == Constants.INF)) {
             System.out.printf("Lose\n");
             return;
         }
@@ -653,28 +640,11 @@ public class Main {
 //            e.printStackTrace();
 //        }
 
-        ArrayList<Tuple<Integer>> shifts = new ArrayList<Tuple<Integer>>();
-        shifts.add(new Tuple<Integer>(1, 0));
-        shifts.add(new Tuple<Integer>(-1, 0));
-        shifts.add(new Tuple<Integer>(0, 1));
-        shifts.add(new Tuple<Integer>(0, -1));
-
-        shifts.add(new Tuple<Integer>(1, 1));
-        shifts.add(new Tuple<Integer>(-1, 1));
-        shifts.add(new Tuple<Integer>(-1, -1));
-        shifts.add(new Tuple<Integer>(1, -1));
-
         Main m = new Main();
         Board board = new Board(9, 9);
 
         board.printBoard();
-//        AStar toTortuga = new AStar(board.from_x, board.from_y, board.tortuga_x, board.tortuga_y, shifts, board);
-//        for(int i = 0; i < 9; i++){
-//            for(int j = 0; j < 9; j++) {
-//                System.out.printf("%20d", toTortuga.map[i][j]);
-//            }
-//            System.out.printf("\n");
-//        }
+
         m.solve(board, new AStar());
         m.solve(board, new BackTracking());
 //        System.setOut(stdout);
