@@ -3,6 +3,7 @@ import javax.naming.InsufficientResourcesException;
 import javax.swing.plaf.BorderUIResource;
 import java.io.File;
 import java.io.PrintStream;
+import java.security.interfaces.RSAKey;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.PriorityQueue;
@@ -270,9 +271,7 @@ class Board {
 }
 
 interface SearchAlgorithm {
-    private void solve() {
-
-    }
+    Result solve(int from_x, int from_y, int finish_x, int finish_y, ArrayList<Tuple<Integer>> shifts, Board board);
     default ArrayList<Tuple<Integer>> getPath(int from_x, int from_y, int finish_x, int finish_y, int[][] map, ArrayList<Tuple<Integer>> shifts) {
         ArrayList<Tuple<Integer>> ans = new ArrayList<Tuple<Integer>>();
 
@@ -307,6 +306,23 @@ interface SearchAlgorithm {
     int getPathLength();
 }
 
+class Result {
+    private final int pathLength;
+    private final ArrayList<Tuple<Integer>> path;
+
+    Result(int pathLength, ArrayList<Tuple<Integer>> path) {
+        this.pathLength = pathLength;
+        this.path = path;
+    }
+
+    int getPathLength() {
+        return pathLength;
+    }
+
+    ArrayList<Tuple<Integer>> getPath() {
+        return path;
+    }
+}
 class AStar implements SearchAlgorithm {
     int from_x, from_y, finish_x, finish_y;
     ArrayList<Tuple<Integer>> shifts;
@@ -342,27 +358,6 @@ class AStar implements SearchAlgorithm {
     public int getPathLength() {
         return pathLength;
     }
-
-    AStar(int from_x, int from_y, int finish_x, int finish_y, ArrayList<Tuple<Integer>> shifts, Board board) {
-        this.from_x = from_x;
-        this.from_y = from_y;
-        this.finish_x = finish_x;
-        this.finish_y = finish_y;
-        this.shifts = shifts;
-        this.board = board;
-        map = new int[board.rows][board.columns];
-        for (int i = 0; i < board.rows; i++) {
-            for (int j = 0; j < board.columns; j++) {
-                map[i][j] = Constants.INF;
-            }
-        }
-        solve();
-        pathLength = map[finish_x][finish_y];
-        if(pathLength != Constants.INF) {
-            path = getPath(this.from_x, this.from_y, this.finish_x, this.finish_y, this.map, this.shifts);
-        }
-    }
-
     int h(int from_x, int from_y, int finish_x, int finish_y) {
         int f_x = from_x, f_y = from_y, to_x = finish_x, to_y = finish_y;
         int diag = min(abs(finish_x - from_x), abs(finish_y - from_y));
@@ -388,7 +383,29 @@ class AStar implements SearchAlgorithm {
         return diag + max(abs(to_x - f_x), abs(to_y - f_y));
     }
 
-    public void solve() {
+    public Result solve(int from_x, int from_y, int finish_x, int finish_y, ArrayList<Tuple<Integer>> shifts, Board board) {
+        this.from_x = from_x;
+        this.from_y = from_y;
+        this.finish_x = finish_x;
+        this.finish_y = finish_y;
+        this.shifts = shifts;
+        this.board = board;
+        map = new int[board.rows][board.columns];
+        for (int i = 0; i < board.rows; i++) {
+            for (int j = 0; j < board.columns; j++) {
+                map[i][j] = Constants.INF;
+            }
+        }
+
+        solvePrivate();
+        pathLength = map[finish_x][finish_y];
+        if(pathLength != Constants.INF) {
+            path = getPath(this.from_x, this.from_y, this.finish_x, this.finish_y, this.map, this.shifts);
+        }
+
+        return new Result(pathLength, path);
+    }
+    public void solvePrivate() {
         map[from_x][from_y] = 0;
         PriorityQueue<Node> q = new PriorityQueue<>();
 
@@ -458,7 +475,13 @@ class BackTracking implements SearchAlgorithm {
     private int pathLength;
     ArrayList<Tuple<Integer>> path;
 
-    BackTracking(int from_x, int from_y, int finish_x, int finish_y, ArrayList<Tuple<Integer>> shifts, Board board) {
+    private void solvePrivate(ArrayList<Tuple<Integer>> shifts, int[][] map) {
+        State start = new State(from_x, from_y);
+
+        this.backTrackingSearch(start);
+    }
+
+    public Result solve(int from_x, int from_y, int finish_x, int finish_y, ArrayList<Tuple<Integer>> shifts, Board board) {
         this.from_x = from_x;
         this.from_y = from_y;
         this.finish_x = finish_x;
@@ -473,16 +496,11 @@ class BackTracking implements SearchAlgorithm {
                 map[i][j] = Constants.INF;
             }
         }
-
-        solve(this.shifts, map);
+        solvePrivate(shifts, map);
         pathLength = map[finish_x][finish_y];
         path = getPath(this.from_x, this.from_y, this.finish_x, this.finish_y, this.map, this.shifts);
-    }
 
-    private void solve(ArrayList<Tuple<Integer>> shifts, int[][] map) {
-        State start = new State(from_x, from_y);
-
-        this.backTrackingSearch(start);
+        return new Result(pathLength, path);
     }
 
     private void backTrackingSearch(State state) {
@@ -583,14 +601,7 @@ public class Main {
         System.out.printf("-------------------\n");
     }
 
-    void solveWithBackTrackingSearch(Board board) {
-        int from_x = board.from_x;
-        int from_y = board.from_y;
-        int finish_x = board.finish_x;
-        int finish_y = board.finish_y;
-        int tortuga_x = board.tortuga_x;
-        int tortuga_y = board.tortuga_y;
-
+    void solve(Board board, SearchAlgorithm algorithm) {
         ArrayList<Tuple<Integer>> shifts = new ArrayList<Tuple<Integer>>();
         shifts.add(new Tuple<Integer>(1, 0));
         shifts.add(new Tuple<Integer>(-1, 0));
@@ -603,75 +614,25 @@ public class Main {
         shifts.add(new Tuple<Integer>(1, -1));
 
         // direct path to chest
-        BackTracking directSearch = new BackTracking(board.from_x, board.from_y, board.finish_x, board.finish_y, shifts, board);
+        Result direct = algorithm.solve(board.from_x, board.from_y, board.finish_x, board.finish_y, shifts, board);
 
         // through Tortuga
-        BackTracking toTortuga = new BackTracking(board.from_x, board.from_y, board.tortuga_x, board.tortuga_y, shifts, board);
-        BackTracking fromTortugaToFinish = new BackTracking(board.tortuga_x, board.tortuga_y, board.finish_x, board.finish_y, shifts, board);
+        Result toTortuga = algorithm.solve(board.from_x, board.from_y, board.tortuga_x, board.tortuga_y, shifts, board);
+        Result fromTortugaToFinish = algorithm.solve(board.tortuga_x, board.tortuga_y, board.finish_x, board.finish_y, shifts, board);
 
-        if(directSearch.getPathLength() == Constants.INF && (toTortuga.getPathLength() == Constants.INF || fromTortugaToFinish.getPathLength() == Constants.INF)) {
+        if(direct.getPathLength() == Constants.INF && (toTortuga.getPathLength() == Constants.INF || fromTortugaToFinish.getPathLength() == Constants.INF)) {
             System.out.printf("Lose\n");
             return;
         }
 
         ArrayList<Tuple<Integer>> ans_path;
 
-        if (directSearch.getPathLength() <= toTortuga.getPathLength() + fromTortugaToFinish.getPathLength()) {
-            ans_path = directSearch.path;
+        if (direct.getPathLength() <= toTortuga.getPathLength() + fromTortugaToFinish.getPathLength()) {
+            ans_path = direct.getPath();
         } else {
-            ans_path = toTortuga.path;
+            ans_path = toTortuga.getPath();
             ans_path.remove(ans_path.size() - 1);
-            ans_path.addAll(fromTortugaToFinish.path);
-        }
-
-        System.out.printf("Win\n%d\n", ans_path.size() - 1);
-        for (int i = 0; i < ans_path.size(); i++) {
-            System.out.printf("[%d,%d] ", ans_path.get(i).getX(), ans_path.get(i).getY());
-        }
-        System.out.printf("\n");
-
-        char[][] pathMap = getPathMap(ans_path, board.rows, board.columns);
-        printMap(pathMap);
-    }
-    void solveWithAStar(Board board) {
-        int from_x = board.from_x;
-        int from_y = board.from_y;
-        int finish_x = board.finish_x;
-        int finish_y = board.finish_y;
-        int tortuga_x = board.tortuga_x;
-        int tortuga_y = board.tortuga_y;
-
-        ArrayList<Tuple<Integer>> shifts = new ArrayList<Tuple<Integer>>();
-        shifts.add(new Tuple<Integer>(1, 0));
-        shifts.add(new Tuple<Integer>(-1, 0));
-        shifts.add(new Tuple<Integer>(0, 1));
-        shifts.add(new Tuple<Integer>(0, -1));
-
-        shifts.add(new Tuple<Integer>(1, 1));
-        shifts.add(new Tuple<Integer>(-1, 1));
-        shifts.add(new Tuple<Integer>(-1, -1));
-        shifts.add(new Tuple<Integer>(1, -1));
-
-        // direct path to chest
-        AStar directAStar = new AStar(board.from_x, board.from_y, board.finish_x, board.finish_y, shifts, board);
-
-        // through Tortuga
-        AStar toTortuga = new AStar(board.from_x, board.from_y, board.tortuga_x, board.tortuga_y, shifts, board);
-        AStar fromTortugaToFinish = new AStar(board.tortuga_x, board.tortuga_y, board.finish_x, board.finish_y, shifts, board);
-
-        if(directAStar.getPathLength() == Constants.INF && (toTortuga.getPathLength() == Constants.INF || fromTortugaToFinish.getPathLength() == Constants.INF)) {
-            System.out.printf("Lose\n");
-            return;
-        }
-
-        ArrayList<Tuple<Integer>> ans_path;
-
-        if (directAStar.getPathLength() <= toTortuga.getPathLength() + fromTortugaToFinish.getPathLength()) {
-            ans_path = directAStar.path;
-        } else {
-            ans_path = toTortuga.path;
-            ans_path.remove(ans_path.size() - 1);
-            ans_path.addAll(fromTortugaToFinish.path);
+            ans_path.addAll(fromTortugaToFinish.getPath());
         }
 
         System.out.printf("Win\n%d\n", ans_path.size() - 1);
@@ -714,9 +675,8 @@ public class Main {
 //            }
 //            System.out.printf("\n");
 //        }
-//        m.solveWithBackTrackingSearch(board);
-        m.solveWithAStar(board);
-        m.solveWithBackTrackingSearch(board);
+        m.solve(board, new AStar());
+        m.solve(board, new BackTracking());
 //        System.setOut(stdout);
     }
 }
