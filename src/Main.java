@@ -1,5 +1,8 @@
+import java.io.*;
 import java.util.ArrayList;
 import java.util.PriorityQueue;
+import java.util.Random;
+import java.util.zip.CheckedInputStream;
 
 import static java.lang.Math.*;
 
@@ -12,7 +15,8 @@ final class Constants {
     static public char TORTUGA = 'T';
     static public char CHEST = 'C';
     static public char DAVY = 'D';
-    static public char PLAYER = 'P';
+    static public char DAVY_CELL = 'A';
+    static public char PLAYER = 'J';
     static public char PATH = '*';
     static public int INF = (int) 1e9;
 }
@@ -84,7 +88,7 @@ class Board {
     public int tortuga_y;
 
     Character getPiece(int x, int y) {
-        if(isValidCoordinates(x, y)) {
+        if (isValidCoordinates(x, y)) {
             return board[x][y];
         }
         return null;
@@ -100,7 +104,8 @@ class Board {
             }
         }
 
-        createSampleBoard3();
+//        createSampleBoard4();
+        generateMap();
     }
 
     boolean isValidCoordinates(int x, int y) {
@@ -109,6 +114,7 @@ class Board {
 
     /**
      * Tests for ability to kill Kraken
+     *
      * @param x coordinate
      * @param y coordinate
      * @return true if in this cell is kraken "heart" (so, we can kill him) else false
@@ -121,6 +127,7 @@ class Board {
 
     /**
      * Tests for Kraken cell
+     *
      * @param x coordinate
      * @param y coordinate
      * @return true if in this cell is Kraken's perception zone or Kraken "heart" cell
@@ -152,6 +159,91 @@ class Board {
 //        return element == Constants.KRAKEN_CELL || element == Constants.KRAKEN || element == Constants;
     }
 
+    private static int randInRange(int max) {
+
+        if (max < 0) {
+            throw new IllegalArgumentException("Max must be greater or equals than 0");
+        }
+
+        Random r = new Random();
+        return r.nextInt(max);
+    }
+
+    void generateMap() {
+        setPlayer(randInRange(rows), randInRange(columns));
+        int x = randInRange(rows), y = randInRange(columns);
+
+        while (isOccupied(x, y)) {
+            x = randInRange(rows);
+            y = randInRange(columns);
+        }
+        setTortuga(x, y);
+
+        while (isOccupied(x, y)) {
+            x = randInRange(rows);
+            y = randInRange(columns);
+        }
+        setChest(x, y);
+
+        ArrayList<Tuple<Integer>> shifts = new ArrayList<>();
+        shifts.add(new Tuple<>(1, 0));
+        shifts.add(new Tuple<>(0, 0));
+        shifts.add(new Tuple<>(-1, 0));
+        shifts.add(new Tuple<>(0, 1));
+        shifts.add(new Tuple<>(0, -1));
+
+        // set kraken
+        boolean coordinateFound;
+        do {
+            coordinateFound = true;
+            x = randInRange(rows);
+            y = randInRange(columns);
+
+            for (Tuple<Integer> shift : shifts) {
+                if (isOccupied(x + shift.getX(), y + shift.getY())) {
+                    coordinateFound = false;
+                    break;
+                }
+            }
+        }
+        while (!coordinateFound);
+
+        setKraken(x, y);
+
+        shifts.add(new Tuple<>(1, 1));
+        shifts.add(new Tuple<>(-1, 1));
+        shifts.add(new Tuple<>(-1, -1));
+        shifts.add(new Tuple<>(1, -1));
+        do {
+            coordinateFound = true;
+            x = randInRange(rows);
+            y = randInRange(columns);
+
+            for (Tuple<Integer> shift : shifts) {
+                if (isOccupied(x + shift.getX(), y + shift.getY())) {
+                    coordinateFound = false;
+                    break;
+                }
+            }
+        }
+        while (!coordinateFound);
+        setDevy(x, y);
+
+        while (isOccupied(x, y) && getPiece(x, y) != Constants.KRAKEN_CELL) { x = randInRange(rows); y = randInRange(columns); }
+
+        setRock(x, y);
+    }
+
+    private boolean isOccupied(int x, int y) {
+        Character piece = getPiece(x, y);
+        if (piece == null) {
+            return false;
+        }
+        if (piece == Constants.KRAKEN || piece == Constants.DAVY || piece == Constants.BLANK)
+            return false;
+        return true;
+    }
+
     public void setKraken(int x, int y) {
         ArrayList<Tuple<Integer>> shifts = new ArrayList<>();
         shifts.add(new Tuple<>(1, 0));
@@ -171,7 +263,7 @@ class Board {
         ArrayList<Tuple<Integer>> shifts = new ArrayList<>();
         shifts.add(new Tuple<>(0, 0));
 
-        char setChar = 'R';
+        char setChar = Constants.ROCK;
         if (board[x][y] == Constants.KRAKEN_CELL) {
             setChar = Constants.KRAKEN_WITH_ROCK;
         }
@@ -206,6 +298,8 @@ class Board {
         shifts.add(new Tuple<>(-1, 1));
         shifts.add(new Tuple<>(-1, -1));
         shifts.add(new Tuple<>(1, -1));
+
+        board[x][y] = Constants.DAVY_CELL;
 
         setObj(x, y, shifts, Constants.DAVY);
     }
@@ -264,6 +358,18 @@ class Board {
         this.setTortuga(8, 8);
     }
 
+    void createSampleBoard4() { // no path
+        this.setPlayer(7, 0);
+        this.setTortuga(4, 0);
+
+        this.setChest(0, 7);
+
+        this.setKraken(0, 5);
+        this.setDevy(3, 6);
+        this.setRock(6, 6);
+
+    }
+
     public void printBoard() {
         System.out.printf("  ");
         for (int i = 0; i < rows; i++) {
@@ -282,6 +388,7 @@ class Board {
 
 interface SearchAlgorithm {
     Result solve(int from_x, int from_y, int finish_x, int finish_y, ArrayList<Tuple<Integer>> shifts, Board board);
+
     default ArrayList<Tuple<Integer>> getPath(int from_x, int from_y, int finish_x, int finish_y, int[][] map, ArrayList<Tuple<Integer>> shifts) {
         ArrayList<Tuple<Integer>> ans = new ArrayList<>();
         int x = finish_x;
@@ -312,17 +419,20 @@ interface SearchAlgorithm {
         ans.add(0, new Tuple<>(from_x, from_y));
         return ans;
     }
-//    default tryKillKraken()
+
+    //    default tryKillKraken()
     int getPathLength();
 }
 
 class Result {
     private final int pathLength;
     private final ArrayList<Tuple<Integer>> path;
+    private long amountTimeForExecution;
 
-    Result(int pathLength, ArrayList<Tuple<Integer>> path) {
+    Result(int pathLength, ArrayList<Tuple<Integer>> path, long amountTimeForExecution) {
         this.pathLength = pathLength;
         this.path = path;
+        this.amountTimeForExecution = amountTimeForExecution;
     }
 
     int getPathLength() {
@@ -332,13 +442,19 @@ class Result {
     ArrayList<Tuple<Integer>> getPath() {
         return path;
     }
+
+    long getAmountTimeForExecution() {
+        return amountTimeForExecution;
+    }
 }
+
 class AStar implements SearchAlgorithm {
     int from_x, from_y, finish_x, finish_y;
     ArrayList<Tuple<Integer>> shifts;
     Board board;
     int[][] map;
-    char [][] pathMap;
+    char[][] pathMap;
+    long amountTimeForExecution;
 
     private int pathLength;
 
@@ -367,6 +483,7 @@ class AStar implements SearchAlgorithm {
     public int getPathLength() {
         return pathLength;
     }
+
     int h(int from_x, int from_y, int finish_x, int finish_y) {
         int f_x = from_x, f_y = from_y;
         int diag = min(abs(finish_x - from_x), abs(finish_y - from_y));
@@ -393,6 +510,7 @@ class AStar implements SearchAlgorithm {
     }
 
     public Result solve(int from_x, int from_y, int finish_x, int finish_y, ArrayList<Tuple<Integer>> shifts, Board board) {
+        long startTime = System.nanoTime();
         this.from_x = from_x;
         this.from_y = from_y;
         this.finish_x = finish_x;
@@ -408,12 +526,15 @@ class AStar implements SearchAlgorithm {
 
         solvePrivate();
         pathLength = map[finish_x][finish_y];
-        if(pathLength != Constants.INF) {
+        if (pathLength != Constants.INF) {
             path = getPath(this.from_x, this.from_y, this.finish_x, this.finish_y, this.map, this.shifts);
         }
 
-        return new Result(pathLength, path);
+        long endTime = System.nanoTime();
+        amountTimeForExecution = (endTime - startTime);
+        return new Result(pathLength, path, amountTimeForExecution);
     }
+
     public void solvePrivate() {
         map[from_x][from_y] = 0;
         PriorityQueue<Node> q = new PriorityQueue<>();
@@ -457,7 +578,7 @@ class AStar implements SearchAlgorithm {
                     continue;
                 }
 
-                if(map[new_x][new_y] > state.path_length + 1) {
+                if (map[new_x][new_y] > state.path_length + 1) {
                     map[new_x][new_y] = state.path_length + 1;
                     q.add(new Node(state.move(new_x, new_y), state.path_length + 1, h(new_x, new_y, finish_x, board.finish_y)));
                 }
@@ -473,8 +594,10 @@ class BackTracking implements SearchAlgorithm {
     int[][] map;
     private int pathLength;
     ArrayList<Tuple<Integer>> path;
+    long amountTimeForExecution;
 
     public Result solve(int from_x, int from_y, int finish_x, int finish_y, ArrayList<Tuple<Integer>> shifts, Board board) {
+        long startTime = System.nanoTime();
         this.from_x = from_x;
         this.from_y = from_y;
         this.finish_x = finish_x;
@@ -484,19 +607,20 @@ class BackTracking implements SearchAlgorithm {
 
         map = new int[board.rows][board.columns];
 
-        for(int i = 0; i < board.rows; i++) {
-            for(int j = 0; j < board.columns; j++) {
+        for (int i = 0; i < board.rows; i++) {
+            for (int j = 0; j < board.columns; j++) {
                 map[i][j] = Constants.INF;
             }
         }
         State start = new State(from_x, from_y);
         backTrackingSearch(start);
         pathLength = map[finish_x][finish_y];
-        if(pathLength != Constants.INF) {
+        if (pathLength != Constants.INF) {
             path = getPath(this.from_x, this.from_y, this.finish_x, this.finish_y, this.map, this.shifts);
         }
-
-        return new Result(pathLength, path);
+        long endTime = System.nanoTime();
+        amountTimeForExecution = endTime - startTime;
+        return new Result(pathLength, path, amountTimeForExecution);
     }
 
     private void backTrackingSearch(State state) {
@@ -554,6 +678,7 @@ class BackTracking implements SearchAlgorithm {
         return pathLength;
     }
 }
+
 public class Main {
     void printMap(char[][] map) {
         System.out.printf("-------------------\n");
@@ -606,7 +731,9 @@ public class Main {
         Result toTortuga = algorithm.solve(board.from_x, board.from_y, board.tortuga_x, board.tortuga_y, shifts, board);
         Result fromTortugaToFinish = algorithm.solve(board.tortuga_x, board.tortuga_y, board.finish_x, board.finish_y, shifts, board);
 
-        if(direct.getPathLength() == Constants.INF &&
+        Long ans_time = direct.getAmountTimeForExecution() + toTortuga.getAmountTimeForExecution() + fromTortugaToFinish.getAmountTimeForExecution();
+
+        if (direct.getPathLength() == Constants.INF &&
                 (toTortuga.getPathLength() == Constants.INF || fromTortugaToFinish.getPathLength() == Constants.INF)) {
             System.out.printf("Lose\n");
             return;
@@ -614,7 +741,7 @@ public class Main {
 
         ArrayList<Tuple<Integer>> ans_path;
 
-        if (direct.getPathLength() <= toTortuga.getPathLength() + fromTortugaToFinish.getPathLength()) {
+        if (direct.getPathLength() < toTortuga.getPathLength() + fromTortugaToFinish.getPathLength()) {
             ans_path = direct.getPath();
         } else {
             ans_path = toTortuga.getPath();
@@ -627,26 +754,32 @@ public class Main {
             System.out.printf("[%d,%d] ", ans_path.get(i).getX(), ans_path.get(i).getY());
         }
         System.out.printf("\n");
-
         char[][] pathMap = getPathMap(ans_path, board.rows, board.columns);
         printMap(pathMap);
+        System.out.printf("%d nanosec\n", ans_time);
     }
 
     public static void main(String[] args) {
-//        PrintStream stdout = System.out;
+        PrintStream stdout = System.out;
+        var fileAstar = new File("AstarTimes.txt");
+        var fileBackTrack = new File("BackTrackTimes.txt");
 //        try {
-//            System.setOut(new PrintStream(new File("output-file.txt")));
+//            System.setOut(new PrintStream());
 //        } catch (Exception e) {
 //            e.printStackTrace();
 //        }
-
         Main m = new Main();
+
         Board board = new Board(9, 9);
-
+//
         board.printBoard();
-
         m.solve(board, new AStar());
+
+//            try {
+//                System.setOut(new PrintStream(fileBackTrack));
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//            }
         m.solve(board, new BackTracking());
-//        System.setOut(stdout);
     }
 }
