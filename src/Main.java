@@ -1,8 +1,8 @@
+import javax.swing.plaf.BorderUIResource;
+import java.awt.image.AreaAveragingScaleFilter;
 import java.io.*;
-import java.util.ArrayList;
-import java.util.PriorityQueue;
-import java.util.Random;
-import java.util.zip.CheckedInputStream;
+import java.util.*;
+import java.util.regex.Pattern;
 
 import static java.lang.Math.*;
 
@@ -36,11 +36,6 @@ class Tuple<T> {
 
     T getY() {
         return y;
-    }
-
-    void pprint() {
-        System.out.println(x);
-        System.out.println(y);
     }
 }
 
@@ -78,7 +73,7 @@ class State {
 class Board {
     public int rows;
     public int columns;
-    private final char[][] board;
+    private char[][] board;
 
     public int finish_x;
     public int finish_y;
@@ -88,6 +83,7 @@ class Board {
     public int tortuga_y;
 
     Character getPiece(int x, int y) {
+//        initialize(x, y);
         if (isValidCoordinates(x, y)) {
             return board[x][y];
         }
@@ -95,6 +91,12 @@ class Board {
     }
 
     Board(int rows, int columns) {
+        initialize(rows, columns);
+//        createSampleBoard4();
+        generateMap();
+    }
+
+    private void initialize(int rows, int columns) {
         this.rows = rows;
         this.columns = columns;
         board = new char[rows][columns];
@@ -103,9 +105,61 @@ class Board {
                 board[i][j] = Constants.BLANK;
             }
         }
+    }
 
-//        createSampleBoard4();
-        generateMap();
+    Board(int rows, int columns, ArrayList<Tuple<Integer>> arr) throws IncorrectPlace {
+        initialize(rows, columns);
+
+        Tuple<Integer> Jack = arr.get(0);
+        setPlayer(Jack.getX(), Jack.getY());
+
+        Tuple<Integer> Tortuga = arr.get(5);
+        if(isOccupied(Tortuga.getX(), Tortuga.getY())) {
+            throw new IncorrectPlace("Tortuga invalid place");
+        }
+        setTortuga(Tortuga.getX(), Tortuga.getY());
+
+        Tuple<Integer> Chest = arr.get(4);
+        if(isOccupied(Chest.getX(), Chest.getY())) {
+            throw new IncorrectPlace("Chest invalid place");
+        }
+        setChest(Chest.getX(), Chest.getY());
+
+        Tuple<Integer> Kraken = arr.get(2);
+//        boolean canPlace = true;
+        ArrayList<Tuple<Integer>> shifts = new ArrayList<>();
+        shifts.add(new Tuple<>(1, 0));
+        shifts.add(new Tuple<>(0, 0));
+        shifts.add(new Tuple<>(-1, 0));
+        shifts.add(new Tuple<>(0, 1));
+        shifts.add(new Tuple<>(0, -1));
+        for(Tuple<Integer> shift: shifts) {
+            int new_x = Kraken.getX() + shift.getX(), new_y = Kraken.getY() + shift.getY();
+            if(isOccupied(new_x, new_y)) {
+                throw new IncorrectPlace("Kraken invalid place");
+            }
+        }
+        setKraken(Kraken.getX(), Kraken.getY());
+
+        Tuple<Integer> Davy = arr.get(1);
+        shifts.add(new Tuple<>(1, 1));
+        shifts.add(new Tuple<>(-1, 1));
+        shifts.add(new Tuple<>(-1, -1));
+        shifts.add(new Tuple<>(1, -1));
+
+        for(Tuple<Integer> shift: shifts) {
+            int new_x = Davy.getX() + shift.getX(), new_y = Davy.getY() + shift.getY();
+            if(isOccupied(new_x, new_y)) {
+                throw new IncorrectPlace("Davy invalid place");
+            }
+        }
+        setDavy(Davy.getX(), Davy.getY());
+
+        Tuple<Integer> Rock = arr.get(3);
+        if(isOccupied(Rock.getX(), Rock.getY()) && getPiece(Rock.getX(), Rock.getY()) != Constants.KRAKEN_CELL) {
+            throw new IncorrectPlace("Rock invalid place");
+        }
+        setRock(Rock.getX(), Rock.getY());
     }
 
     boolean isValidCoordinates(int x, int y) {
@@ -169,8 +223,8 @@ class Board {
         return r.nextInt(max);
     }
 
-    void generateMap() {
-        setPlayer(randInRange(rows), randInRange(columns));
+    private void generateMap() {
+        setPlayer(0, 0);
         int x = randInRange(rows), y = randInRange(columns);
 
         while (isOccupied(x, y)) {
@@ -227,9 +281,12 @@ class Board {
             }
         }
         while (!coordinateFound);
-        setDevy(x, y);
+        setDavy(x, y);
 
-        while (isOccupied(x, y) && getPiece(x, y) != Constants.KRAKEN_CELL) { x = randInRange(rows); y = randInRange(columns); }
+        while (isOccupied(x, y) && getPiece(x, y) != Constants.KRAKEN_CELL) {
+            x = randInRange(rows);
+            y = randInRange(columns);
+        }
 
         setRock(x, y);
     }
@@ -287,7 +344,7 @@ class Board {
         setObj(x, y, shifts, Constants.CHEST);
     }
 
-    public void setDevy(int x, int y) {
+    public void setDavy(int x, int y) {
         ArrayList<Tuple<Integer>> shifts = new ArrayList<>();
         shifts.add(new Tuple<>(1, 0));
         shifts.add(new Tuple<>(-1, 0));
@@ -323,7 +380,7 @@ class Board {
 
     void createSampleBoard() { // given example
         this.setPlayer(0, 0);
-        this.setDevy(4, 7);
+        this.setDavy(4, 7);
         this.setChest(8, 7);
         this.setKraken(3, 2);
         this.setRock(6, 4);
@@ -332,7 +389,7 @@ class Board {
 
     void createSampleBoard1() { // Tortuga (1, 1)
         this.setPlayer(0, 0);
-        this.setDevy(4, 7);
+        this.setDavy(4, 7);
         this.setChest(8, 7);
         this.setKraken(2, 2);
         this.setRock(6, 4);
@@ -343,7 +400,7 @@ class Board {
         this.setPlayer(0, 0);
         this.setChest(8, 7);
         this.setKraken(7, 5);
-        this.setDevy(6, 7);
+        this.setDavy(6, 7);
         this.setRock(6, 4);
         this.setTortuga(0, 6);
     }
@@ -353,7 +410,7 @@ class Board {
 
         this.setChest(8, 7);
         this.setKraken(7, 5);
-        this.setDevy(6, 7);
+        this.setDavy(6, 7);
         this.setRock(6, 4);
         this.setTortuga(8, 8);
     }
@@ -365,7 +422,7 @@ class Board {
         this.setChest(0, 7);
 
         this.setKraken(0, 5);
-        this.setDevy(3, 6);
+        this.setDavy(3, 6);
         this.setRock(6, 6);
 
     }
@@ -375,7 +432,7 @@ class Board {
         for (int i = 0; i < rows; i++) {
             System.out.printf("%d ", i);
         }
-        System.out.printf("\n");
+        System.out.print("\n");
         for (int i = 0; i < rows; i++) {
             System.out.printf("%d ", i);
             for (int j = 0; j < columns; j++) {
@@ -485,28 +542,8 @@ class AStar implements SearchAlgorithm {
     }
 
     int h(int from_x, int from_y, int finish_x, int finish_y) {
-        int f_x = from_x, f_y = from_y;
         int diag = min(abs(finish_x - from_x), abs(finish_y - from_y));
-
-        if (f_x < finish_x && f_y < finish_y) {
-            f_x += diag;
-            f_y += diag;
-        }
-
-        if (f_x > finish_x && f_y < finish_y) {
-            f_x -= diag;
-            f_y += diag;
-        }
-        if (f_x < finish_x && f_y > finish_y) {
-            f_x += diag;
-            f_y -= diag;
-        }
-        if (f_x > finish_x && f_y > finish_y) {
-            f_x -= diag;
-            f_y -= diag;
-        }
-
-        return diag + max(abs(finish_x - f_x), abs(finish_y - f_y));
+        return diag + abs(abs(from_x - finish_x) - abs(from_y - finish_y));
     }
 
     public Result solve(int from_x, int from_y, int finish_x, int finish_y, ArrayList<Tuple<Integer>> shifts, Board board) {
@@ -680,6 +717,8 @@ class BackTracking implements SearchAlgorithm {
 }
 
 public class Main {
+    //    FileWriter fileWriter;
+//    PrintWriter printWriter;
     void printMap(char[][] map) {
         System.out.printf("-------------------\n");
         System.out.printf("  ");
@@ -713,7 +752,23 @@ public class Main {
     }
 
     void solve(Board board, SearchAlgorithm algorithm) {
+//        try {
+//            if(algorithm instanceof AStar) {
+//                fileWriter = new FileWriter("AStar_final.txt", true);
+//                printWriter = new PrintWriter(fileWriter, true);
+//            }
+//            else {
+//                fileWriter = new FileWriter("BackTrack_final.txt", true);
+//                printWriter = new PrintWriter(fileWriter, true);
+//            }
+//        }
+//         catch (Exception e) {
+//            e.printStackTrace();
+//         }
+
+
         ArrayList<Tuple<Integer>> shifts = new ArrayList<>();
+
         shifts.add(new Tuple<>(1, 0));
         shifts.add(new Tuple<>(-1, 0));
         shifts.add(new Tuple<>(0, 1));
@@ -731,13 +786,16 @@ public class Main {
         Result toTortuga = algorithm.solve(board.from_x, board.from_y, board.tortuga_x, board.tortuga_y, shifts, board);
         Result fromTortugaToFinish = algorithm.solve(board.tortuga_x, board.tortuga_y, board.finish_x, board.finish_y, shifts, board);
 
-        Long ans_time = direct.getAmountTimeForExecution() + toTortuga.getAmountTimeForExecution() + fromTortugaToFinish.getAmountTimeForExecution();
+        long ans_time = direct.getAmountTimeForExecution() + toTortuga.getAmountTimeForExecution() + fromTortugaToFinish.getAmountTimeForExecution();
 
         if (direct.getPathLength() == Constants.INF &&
                 (toTortuga.getPathLength() == Constants.INF || fromTortugaToFinish.getPathLength() == Constants.INF)) {
             System.out.printf("Lose\n");
+            System.out.printf("%f ms\n", (double) ans_time / 1e6);
+//            printWriter.printf("%d L\n", ans_time);
             return;
         }
+
 
         ArrayList<Tuple<Integer>> ans_path;
 
@@ -756,30 +814,125 @@ public class Main {
         System.out.printf("\n");
         char[][] pathMap = getPathMap(ans_path, board.rows, board.columns);
         printMap(pathMap);
-        System.out.printf("%d nanosec\n", ans_time);
+        System.out.printf("%f ms\n", (double) ans_time / 1e6);
+//        printWriter.printf("%d W\n", ans_time);
     }
 
     public static void main(String[] args) {
-        PrintStream stdout = System.out;
-        var fileAstar = new File("AstarTimes.txt");
-        var fileBackTrack = new File("BackTrackTimes.txt");
+        Main m = new Main();
+        Scanner in = new Scanner(System.in);
+        int inputType = 3;
+        do {
+            System.out.print("Select option for map:\n1 - for random generation\n2 - read from input.txt\n");
+            System.out.print("> ");
+            try {
+                inputType = in.nextInt();
+            } catch (InputMismatchException e) {
+                System.out.print("Error: Not a number\n");
+                continue;
+            }
+
+            if (inputType != 1 && inputType != 2) {
+                System.out.print("Error: Incorrect input\n");
+            }
+        } while (inputType != 1 && inputType != 2);
+        int perceptionScenario;
+        if (inputType == 1) {
+            do {
+                System.out.print("Enter perception scenario from console (1 or 2):\n");
+                System.out.print("> ");
+                perceptionScenario = in.nextInt();
+                if (perceptionScenario != 1 && perceptionScenario != 2) {
+                    System.out.print("Error: Incorrect input\n");
+                }
+            } while (perceptionScenario != 1 && perceptionScenario != 2);
+            Board board = new Board(9, 9);
+            board.printBoard();
+            m.solve(board, new AStar());
+            m.solve(board, new BackTracking());
+            return;
+        }
+        Scanner scannerInput;
+        try {
+            scannerInput = new Scanner(new File("input.txt"));
+        } catch (IOException e) {
+            System.out.printf("Error: No input.txt file");
+            return;
+        }
+
+        String coords = scannerInput.nextLine();
+//        Pattern pattern = Pattern.compile("^(\\[\\d,\\d\\]\\s){5}\\[\\d,\\d\\]$");
+        if(!Pattern.matches("^(\\[\\d,\\d\\]\\s){5}\\[\\d,\\d\\]$", coords)) {
+            System.out.print("Error: Wrong coordinates in input.txt\n");
+            return;
+        }
+        try {
+            perceptionScenario = scannerInput.nextInt();
+            if(!(perceptionScenario == 1 || perceptionScenario == 2)){
+                throw new InputMismatchException();
+            }
+        } catch (InputMismatchException e) {
+            System.out.print("Error: Wrong perception scenario in input.txt\n");
+            return;
+        }
+        boolean endOfFile = false;
+        try {
+            scannerInput.nextLine();
+        }
+        catch (NoSuchElementException e) {
+            endOfFile = true;
+        }
+        if(!endOfFile) {
+            System.out.print("Error: File contains more than 2 lines\n");
+            return;
+        }
+
+//        System.out.println(coords);
+        ArrayList<Tuple<Integer>> coordinates = new ArrayList<>();
+        for(String token: coords.split(" ")) {
+            token = token.replace("[", "");
+            token = token.replace("]", "");
+//            System.out.println(token);
+
+            String []digits = token.split(",");
+            coordinates.add(new Tuple<Integer>(Integer.parseInt(digits[0]), Integer.parseInt(digits[1])));
+        }
+
+        Board board;
+        try {
+            board = new Board(9, 9, coordinates);
+        }
+        catch (IncorrectPlace e) {
+            System.out.print(e.getMessage());
+            return;
+        }
+
+        m.solve(board, new AStar());
+        m.solve(board, new BackTracking());
+
+
+//        PrintStream stdout = System.out;
 //        try {
 //            System.setOut(new PrintStream());
 //        } catch (Exception e) {
 //            e.printStackTrace();
 //        }
-        Main m = new Main();
 
-        Board board = new Board(9, 9);
-//
-        board.printBoard();
-        m.solve(board, new AStar());
+
+//        for(int i = 0; i < 1000; i++){
+
+
+//        }
+//        m.printWriter.close();
+
 
 //            try {
 //                System.setOut(new PrintStream(fileBackTrack));
 //            } catch (Exception e) {
 //                e.printStackTrace();
 //            }
-        m.solve(board, new BackTracking());
+
+//        AStar a = new AStar();
+//        System.out.printf("%d", a.h(0, 0, 0, 5));
     }
 }
