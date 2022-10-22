@@ -1089,7 +1089,7 @@ public class Main {
     /**
      * Supporting function for printing map.
      *
-     * @param map 2 dimentional array
+     * @param map 2 dimensional array
      */
     private void printMap(char[][] map) {
         System.out.print("-------------------\n");
