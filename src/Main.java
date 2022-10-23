@@ -5,6 +5,19 @@ import java.util.regex.Pattern;
 import static java.lang.Math.*;
 
 /**
+ * New exception in situation when Actors want to be in the cells that are occupied by the condition of the task.
+ */
+class IncorrectPlace extends Exception {
+    /**
+     * Constructor for exception with string message
+     * @param errorMessage - error message
+     */
+    public IncorrectPlace(String errorMessage) {
+        super(errorMessage);
+    }
+}
+
+/**
  * This class uses for constants in my program.
  * Symbols:
  * Blank - empty cell
@@ -140,17 +153,17 @@ class State {
     /**
      * Current x coordinate
      */
-    public int current_x;
+    public int currentX;
 
     /**
      * Current y coordinate
      */
-    public int current_y;
+    public int currentY;
 
     /**
      * Current path length from start cell
      */
-    int path_length;
+    int pathLength;
 
     /**
      * Does Jack have a cask from Tortuga (Did he visit Tortuga?).
@@ -162,34 +175,34 @@ class State {
      * Has Jack killed the Kraken? Is it alive?
      * This variable indicates whether the kraken is killed.
      */
-    public boolean kraken_is_dead = false;
+    public boolean krakenIsDead = false;
 
     /**
      * Constructor just with coordinates, convenient for first status.
      *
-     * @param current_x - position x
-     * @param current_y - position y
+     * @param currentX - position x
+     * @param currentY - position y
      */
-    State(int current_x, int current_y) {
-        this.current_x = current_x;
-        this.current_y = current_y;
-        path_length = 0;
+    State(int currentX, int currentY) {
+        this.currentX = currentX;
+        this.currentY = currentY;
+        pathLength = 0;
     }
 
     /**
      * Constructor that sets all variables.
      *
-     * @param current_x      - position x
-     * @param current_y      - position y
+     * @param currentX      - position x
+     * @param currentY      - position y
      * @param cask           - cask flag
-     * @param kraken_is_dead - kraken death flag
-     * @param path_length    - length of path from begin to end
+     * @param krakenIsDead - kraken death flag
+     * @param pathLength    - length of path from begin to end
      */
-    State(int current_x, int current_y, boolean cask, boolean kraken_is_dead, int path_length) {
-        this(current_x, current_y);
+    State(int currentX, int currentY, boolean cask, boolean krakenIsDead, int pathLength) {
+        this(currentX, currentY);
         this.cask = cask;
-        this.kraken_is_dead = kraken_is_dead;
-        this.path_length = path_length;
+        this.krakenIsDead = krakenIsDead;
+        this.pathLength = pathLength;
     }
 
     /**
@@ -201,7 +214,23 @@ class State {
      * @return new State with copy of other variables of class
      */
     State move(int x, int y) {
-        return new State(x, y, this.cask, this.kraken_is_dead, this.path_length + 1);
+        return new State(x, y, this.cask, this.krakenIsDead, this.pathLength + 1);
+    }
+
+    /**
+     * Getter for x coordinate
+     * @return x coordinate
+     */
+    int getX() {
+        return currentX;
+    }
+
+    /**
+     * Getter for y coordinate
+     * @return y coordinate
+     */
+    int getY() {
+        return currentY;
     }
 }
 
@@ -927,8 +956,8 @@ class AStar extends SearchAlgorithm {
         while (q.size() != 0) {
             Node cur = q.poll();
             State state = cur.state;
-            int current_x = state.current_x;
-            int current_y = state.current_y;
+            int current_x = state.getX();
+            int current_y = state.getY();
             if (current_x == board.tortuga_x && current_y == board.tortuga_y) {
                 state.cask = true;
             }
@@ -936,7 +965,7 @@ class AStar extends SearchAlgorithm {
                 return;
             }
 
-            if (!state.kraken_is_dead && state.cask) {
+            if (!state.krakenIsDead && state.cask) {
                 for (Tuple<Integer> shift : shifts) {
                     int new_x = current_x + shift.getX();
                     int new_y = current_y + shift.getY();
@@ -944,7 +973,7 @@ class AStar extends SearchAlgorithm {
                         continue;
                     }
                     if (board.isKrakenHeart(new_x, new_y) && state.cask) {
-                        state.kraken_is_dead = true;
+                        state.krakenIsDead = true;
                         break;
                     }
                 }
@@ -958,13 +987,13 @@ class AStar extends SearchAlgorithm {
                     continue;
                 }
 
-                if (!((board.isKrakenCell(new_x, new_y) && state.kraken_is_dead) || !board.isEnemy(new_x, new_y))) {
+                if (!((board.isKrakenCell(new_x, new_y) && state.krakenIsDead) || !board.isEnemy(new_x, new_y))) {
                     continue;
                 }
 
-                if (map[new_x][new_y] > state.path_length + 1) {
-                    map[new_x][new_y] = state.path_length + 1;
-                    q.add(new Node(state.move(new_x, new_y), state.path_length + 1, h(new_x, new_y, finish_x, board.finish_y)));
+                if (map[new_x][new_y] > state.pathLength + 1) {
+                    map[new_x][new_y] = state.pathLength + 1;
+                    q.add(new Node(state.move(new_x, new_y), state.pathLength + 1, h(new_x, new_y, finish_x, board.finish_y)));
                 }
             }
         }
@@ -1019,16 +1048,16 @@ class BackTracking extends SearchAlgorithm {
      * @param state start state of algorithm
      */
     private void backTrackingSearch(State state) {
-        int current_x = state.current_x;
-        int current_y = state.current_y;
+        int current_x = state.getX();
+        int current_y = state.getY();
 
         if (current_x == finish_x && current_y == finish_y) {
-            map[current_x][current_y] = min(map[current_x][current_y], state.path_length);
+            map[current_x][current_y] = min(map[current_x][current_y], state.pathLength);
             return;
         }
 
-        if (map[current_x][current_y] > state.path_length) {
-            map[current_x][current_y] = state.path_length;
+        if (map[current_x][current_y] > state.pathLength) {
+            map[current_x][current_y] = state.pathLength;
         } else {
             return;
         }
@@ -1037,7 +1066,7 @@ class BackTracking extends SearchAlgorithm {
             state.cask = true;
         }
 
-        if (!state.kraken_is_dead && state.cask) {
+        if (!state.krakenIsDead && state.cask) {
             for (Tuple<Integer> shift : shifts) {
                 int new_x = current_x + shift.getX();
                 int new_y = current_y + shift.getY();
@@ -1045,7 +1074,7 @@ class BackTracking extends SearchAlgorithm {
                     continue;
                 }
                 if (board.isKrakenHeart(new_x, new_y) && state.cask) {
-                    state.kraken_is_dead = true;
+                    state.krakenIsDead = true;
                     break;
                 }
             }
@@ -1059,8 +1088,8 @@ class BackTracking extends SearchAlgorithm {
                 continue;
             }
 
-            if ((board.isKrakenCell(new_x, new_y) && state.kraken_is_dead) || !board.isEnemy(new_x, new_y)) {
-                if (map[new_x][new_y] > state.path_length + 1) {
+            if ((board.isKrakenCell(new_x, new_y) && state.krakenIsDead) || !board.isEnemy(new_x, new_y)) {
+                if (map[new_x][new_y] > state.pathLength + 1) {
                     backTrackingSearch(state.move(new_x, new_y));
                 }
 
@@ -1208,6 +1237,7 @@ public class Main {
 
     /**
      * Entry point function of program. Provide user interface, parsing for coordinates and perception scenario, validating input.
+     *
      * @param args - arguments from command line (is not used in this program)
      * @throws FileNotFoundException if outputAStar.txt or outputBacktracking.txt if there are do not exist
      */
@@ -1299,11 +1329,12 @@ public class Main {
             System.out.print(e.getMessage());
             return;
         }
-//        board.printBoard();
+        board.printBoard();
         System.setOut(new PrintStream("outputAStar.txt"));
         m.solve(board, new AStar());
         System.setOut(new PrintStream("outputBacktracking.txt"));
         m.solve(board, new BackTracking());
         System.setOut(stdout);
     }
+
 }
