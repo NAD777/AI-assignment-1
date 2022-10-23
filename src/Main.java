@@ -681,10 +681,22 @@ class Board {
  */
 abstract class SearchAlgorithm {
     /**
+     * Number of scenario 1 or 2
+     */
+    protected int scenario;
+    /**
      * (from_x, from_y) - position from where Jack starts
      * (finish_x, finish_y) - position to where Jack goes
      */
     int from_x, from_y, finish_x, finish_y;
+
+    /**
+     * Getter for scenario
+     * @return scenario number
+     */
+    public int getScenario() {
+        return scenario;
+    }
 
     /**
      * array of shift for Jack movement with respect to (x, y)
@@ -846,6 +858,13 @@ class Result {
  */
 class AStar extends SearchAlgorithm {
     /**
+     * Constructor for A* algorithm
+     * @param scenario number of scenario
+     */
+    AStar(int scenario) {
+        this.scenario = scenario;
+    }
+    /**
      * Node for priority queue that can be compared by f = g + h and h, where h - heuristics, g - amount of steps from begin.
      * Also, node has state inside.
      */
@@ -994,16 +1013,65 @@ class AStar extends SearchAlgorithm {
                 if (map[new_x][new_y] > state.pathLength + 1) {
                     map[new_x][new_y] = state.pathLength + 1;
                     q.add(new Node(state.move(new_x, new_y), state.pathLength + 1, h(new_x, new_y, finish_x, board.finish_y)));
+
+                }
+            }
+            if(scenario == 2) {
+                ArrayList<Tuple<Integer>> shifts2 = new ArrayList<>();
+                shifts2.add(new Tuple<>(2, 0));
+                shifts2.add(new Tuple<>(0, 2));
+                shifts2.add(new Tuple<>(-2, 0));
+                shifts2.add(new Tuple<>(0, -2));
+
+                ArrayList<Tuple<Integer>> check = new ArrayList<>();
+                check.add(new Tuple<>(1, 0));
+                check.add(new Tuple<>(0, 1));
+                check.add(new Tuple<>(-1, 0));
+                check.add(new Tuple<>(0, -1));
+
+                for (int i = 0; i < shifts2.size(); i++) {
+                    int new_x = current_x + shifts2.get(i).getX();
+                    int new_y = current_y + shifts2.get(i).getY();
+
+                    int toCheckX = current_x + check.get(i).getX();
+                    int toCheckY = current_y + check.get(i).getY();
+
+                    if (!board.isValidCoordinates(new_x, new_y) || !board.isValidCoordinates(toCheckX, toCheckY)) {
+                        continue;
+                    }
+
+                    if (!((board.isKrakenCell(new_x, new_y) && state.krakenIsDead) || !board.isEnemy(new_x, new_y))) {
+                        continue;
+                    }
+
+                    if (!((board.isKrakenCell(toCheckX, toCheckY) && state.krakenIsDead) || !board.isEnemy(toCheckX, toCheckY))) {
+                        continue;
+                    }
+
+                    if (map[new_x][new_y] > state.pathLength + 2) {
+                        map[new_x][new_y] = state.pathLength + 2;
+                        State newState = state.move(new_x, new_y);
+                        newState.pathLength += 1;
+                        q.add(new Node(newState, state.pathLength + 2, h(new_x, new_y, finish_x, board.finish_y)));
+                    }
                 }
             }
         }
     }
+
 }
 
 /**
  * Implementation of Backtracking algorithm.
  */
 class BackTracking extends SearchAlgorithm {
+    /**
+     * Constructor for BackTracking* algorithm
+     * @param scenario number of scenario
+     */
+    BackTracking(int scenario) {
+        this.scenario = scenario;
+    }
     /**
      * Caller for function that solves the problem when Jack starts from (from_x, from_y) to (finish_x, finish_y).
      *
@@ -1095,6 +1163,44 @@ class BackTracking extends SearchAlgorithm {
 
             }
         }
+        if(scenario == 2) {
+            ArrayList<Tuple<Integer>> shifts2 = new ArrayList<>();
+            shifts2.add(new Tuple<>(2, 0));
+            shifts2.add(new Tuple<>(0, 2));
+            shifts2.add(new Tuple<>(-2, 0));
+            shifts2.add(new Tuple<>(0, -2));
+
+            ArrayList<Tuple<Integer>> check = new ArrayList<>();
+            check.add(new Tuple<>(1, 0));
+            check.add(new Tuple<>(0, 1));
+            check.add(new Tuple<>(-1, 0));
+            check.add(new Tuple<>(0, -1));
+
+            for (int i = 0; i < shifts2.size(); i++) {
+                int new_x = current_x + shifts2.get(i).getX();
+                int new_y = current_y + shifts2.get(i).getY();
+
+                int checkX = current_x + check.get(i).getX();;
+                int checkY = current_x + check.get(i).getY();;
+
+                if (!board.isValidCoordinates(new_x, new_y)) {
+                    continue;
+                }
+                if (!board.isValidCoordinates(checkX, checkY)) {
+                    continue;
+                }
+
+                if ((board.isKrakenCell(new_x, new_y) && state.krakenIsDead) || !board.isEnemy(new_x, new_y)) {
+                    if((board.isKrakenCell(checkX, checkY) && state.krakenIsDead) || !board.isEnemy(checkX, checkY)) {
+                        if (map[new_x][new_y] > state.pathLength + 2) {
+                            State newState = state.move(new_x, new_y);
+                            newState.pathLength += 1;
+                            backTrackingSearch(state);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -1112,7 +1218,7 @@ class BackTracking extends SearchAlgorithm {
  * Entry point class of program.
  */
 public class Main {
-    //    FileWriter fileWriter;
+//    FileWriter fileWriter;
 //    PrintWriter printWriter;
 
     /**
@@ -1171,20 +1277,6 @@ public class Main {
      * @param algorithm - Backtracking or A* instance of class
      */
     void solve(Board board, SearchAlgorithm algorithm) {
-//        try {
-//            if(algorithm instanceof AStar) {
-//                fileWriter = new FileWriter("AStar_final_final.txt", true);
-//                printWriter = new PrintWriter(fileWriter, true);
-//            }
-//            else {
-//                fileWriter = new FileWriter("BackTrack_final_final.txt", true);
-//                printWriter = new PrintWriter(fileWriter, true);
-//            }
-//        }
-//         catch (Exception e) {
-//            e.printStackTrace();
-//         }
-//
         ArrayList<Tuple<Integer>> shifts = new ArrayList<>();
 
         shifts.add(new Tuple<>(1, 0));
@@ -1209,7 +1301,6 @@ public class Main {
         if (direct.getPathLength() == Constants.INF &&
                 (toTortuga.getPathLength() == Constants.INF || fromTortugaToFinish.getPathLength() == Constants.INF)) {
             System.out.print("Lose\n");
-//            printWriter.printf("%d L\n", ans_time);
             return;
         }
 
@@ -1232,7 +1323,6 @@ public class Main {
         char[][] pathMap = getPathMap(ans_path, board.rows, board.columns);
         printMap(pathMap);
         System.out.printf("%f ms\n", (double) ans_time / 1e6);
-//        printWriter.printf("%d W\n", ans_time);
     }
 
     /**
@@ -1273,9 +1363,9 @@ public class Main {
             Board board = new Board(9, 9);
 
             System.setOut(new PrintStream("outputAStar.txt"));
-            m.solve(board, new AStar());
+            m.solve(board, new AStar(perceptionScenario));
             System.setOut(new PrintStream("outputBacktracking.txt"));
-            m.solve(board, new BackTracking());
+            m.solve(board, new BackTracking(perceptionScenario));
             System.setOut(stdout);
 
             return;
@@ -1329,12 +1419,10 @@ public class Main {
             System.out.print(e.getMessage());
             return;
         }
-        board.printBoard();
         System.setOut(new PrintStream("outputAStar.txt"));
-        m.solve(board, new AStar());
+        m.solve(board, new AStar(perceptionScenario));
         System.setOut(new PrintStream("outputBacktracking.txt"));
-        m.solve(board, new BackTracking());
+        m.solve(board, new BackTracking(perceptionScenario));
         System.setOut(stdout);
     }
-
 }

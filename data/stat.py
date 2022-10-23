@@ -1,8 +1,8 @@
 from math import sqrt
 from statistics import median
+import sys
 
-a_star = open("Astar_final_final.txt", "r")
-b_track = open("BackTrack_final_final.txt", "r")
+a_star = open(sys.argv[1], "r")
 
 def get_mean(arr):
     sum = 0
@@ -56,32 +56,21 @@ def median_value(arr):
 
 a_star_data = list(map(lambda x: (int(x.split()[0]), x.split()[1]), a_star.readlines()))
 
-b_track_data = list(map(lambda x: (int(x.split()[0]), x.split()[1]), b_track.readlines()))
 # print(*zip(a_star_data, b_track_data), sep="\n")
 
-print("Mean for A*:", get_mean(a_star_data))
-print("Mean for Back tracking:", get_mean(b_track_data))
+print("Mean:", get_mean(a_star_data))
 
-print("Mode for A*:", mode(a_star_data))
-print("Mode for Back tracking:", mode(b_track_data))
+print("Mode:", mode(a_star_data))
 
-print("Standart deviation for A*:", standart_deviation(a_star_data))
-print("Standart deviation for Back tracking:", standart_deviation(b_track_data))
+print("Standart deviation:", standart_deviation(a_star_data))
 
 loses_A = amount_loses(a_star_data)
-loses_BTrack = amount_loses(b_track_data)
 wins_A = amount_wins(a_star_data)
-wins_BTrack = amount_wins(b_track_data)
-print("Loses for A*:", loses_A)
-print("Loses for Back tracking:", loses_BTrack)
-print("Wins for A*:", wins_A)
-print("Wins for Back tracking:", wins_BTrack)
-print("Loses % A*:", loses_A / len(a_star_data) * 100)
-print("Loses % BackTrack:", loses_BTrack / len(b_track_data) * 100)
-print("Wins % A*:", wins_A / len(a_star_data) * 100)
-print("Wins % BackTrack:", wins_BTrack / len(b_track_data) * 100)
+print("Loses: ", loses_A)
+print("Wins: ", wins_A)
+print("Loses %: ", loses_A / len(a_star_data) * 100)
+print("Wins %: ", wins_A / len(a_star_data) * 100)
 
-print("Median for A*:", median_value(a_star_data) / 10**6) 
-print("Median for Back tracking:", median_value(b_track_data) / 10**6)
+print("Median: ", median_value(a_star_data) / 10**6) 
 
 
