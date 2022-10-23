@@ -783,8 +783,6 @@ abstract class SearchAlgorithm {
         return ans;
     }
 
-    //    default tryKillKraken()
-
     /**
      * Getter for path length
      *
@@ -1023,18 +1021,12 @@ class AStar extends SearchAlgorithm {
                 shifts2.add(new Tuple<>(-2, 0));
                 shifts2.add(new Tuple<>(0, -2));
 
-                ArrayList<Tuple<Integer>> check = new ArrayList<>();
-                check.add(new Tuple<>(1, 0));
-                check.add(new Tuple<>(0, 1));
-                check.add(new Tuple<>(-1, 0));
-                check.add(new Tuple<>(0, -1));
+                for (Tuple<Integer> shift: shifts2) {
+                    int new_x = current_x + shift.getX();
+                    int new_y = current_y + shift.getY();
 
-                for (int i = 0; i < shifts2.size(); i++) {
-                    int new_x = current_x + shifts2.get(i).getX();
-                    int new_y = current_y + shifts2.get(i).getY();
-
-                    int toCheckX = current_x + check.get(i).getX();
-                    int toCheckY = current_y + check.get(i).getY();
+                    int toCheckX = current_x + shift.getX() / 2;
+                    int toCheckY = current_y + shift.getY() / 2;
 
                     if (!board.isValidCoordinates(new_x, new_y) || !board.isValidCoordinates(toCheckX, toCheckY)) {
                         continue;
@@ -1170,18 +1162,12 @@ class BackTracking extends SearchAlgorithm {
             shifts2.add(new Tuple<>(-2, 0));
             shifts2.add(new Tuple<>(0, -2));
 
-            ArrayList<Tuple<Integer>> check = new ArrayList<>();
-            check.add(new Tuple<>(1, 0));
-            check.add(new Tuple<>(0, 1));
-            check.add(new Tuple<>(-1, 0));
-            check.add(new Tuple<>(0, -1));
+            for(Tuple<Integer> shift: shifts2) {
+                int new_x = current_x + shift.getX();
+                int new_y = current_y + shift.getY();
 
-            for (int i = 0; i < shifts2.size(); i++) {
-                int new_x = current_x + shifts2.get(i).getX();
-                int new_y = current_y + shifts2.get(i).getY();
-
-                int checkX = current_x + check.get(i).getX();;
-                int checkY = current_x + check.get(i).getY();;
+                int checkX = current_x + shift.getX() / 2;;
+                int checkY = current_x + shift.getY() / 2;;
 
                 if (!board.isValidCoordinates(new_x, new_y)) {
                     continue;
@@ -1301,6 +1287,7 @@ public class Main {
         if (direct.getPathLength() == Constants.INF &&
                 (toTortuga.getPathLength() == Constants.INF || fromTortugaToFinish.getPathLength() == Constants.INF)) {
             System.out.print("Lose\n");
+//            printWriter.printf("%d L\n", ans_time);
             return;
         }
 
@@ -1323,6 +1310,7 @@ public class Main {
         char[][] pathMap = getPathMap(ans_path, board.rows, board.columns);
         printMap(pathMap);
         System.out.printf("%f ms\n", (double) ans_time / 1e6);
+//        printWriter.printf("%d W\n", ans_time);
     }
 
     /**
