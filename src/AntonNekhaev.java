@@ -1303,9 +1303,9 @@ public class AntonNekhaev {
 
         if (direct.getPathLength() == Constants.INF &&
                 (toTortuga.getPathLength() == Constants.INF || fromTortugaToFinish.getPathLength() == Constants.INF)) {
+            System.out.print("Lose");
             return;
         }
-
 
         ArrayList<Tuple<Integer>> ans_path;
 
