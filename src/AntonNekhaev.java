@@ -1379,8 +1379,13 @@ public class AntonNekhaev {
             System.out.print("Error: No input.txt file");
             return;
         }
-
-        String coords = scannerInput.nextLine();
+        String coords = "";
+        try {
+            coords = scannerInput.nextLine();
+        } catch (Exception e) {
+            System.out.print("Error: Wrong coordinates in input.txt");
+            return;
+        }
         if (!Pattern.matches("^(\\[\\d,\\d]\\s){5}\\[\\d,\\d]$", coords)) {
             System.out.print("Error: Wrong coordinates in input.txt\n");
             return;
@@ -1390,18 +1395,8 @@ public class AntonNekhaev {
             if (!(perceptionScenario == 1 || perceptionScenario == 2)) {
                 throw new InputMismatchException();
             }
-        } catch (InputMismatchException e) {
+        } catch (Exception e) {
             System.out.print("Error: Wrong perception scenario in input.txt\n");
-            return;
-        }
-        boolean endOfFile = false;
-        try {
-            scannerInput.nextLine();
-        } catch (NoSuchElementException e) {
-            endOfFile = true;
-        }
-        if (!endOfFile) {
-            System.out.print("Error: File contains more than 2 lines\n");
             return;
         }
 
