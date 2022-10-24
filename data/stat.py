@@ -62,6 +62,8 @@ print("Mean:", get_mean(a_star_data))
 
 print("Mode:", mode(a_star_data))
 
+print("Median: ", median_value(a_star_data) / 10**6) 
+
 print("Standart deviation:", standart_deviation(a_star_data))
 
 loses_A = amount_loses(a_star_data)
@@ -70,7 +72,5 @@ print("Loses: ", loses_A)
 print("Wins: ", wins_A)
 print("Loses %: ", loses_A / len(a_star_data) * 100)
 print("Wins %: ", wins_A / len(a_star_data) * 100)
-
-print("Median: ", median_value(a_star_data) / 10**6) 
 
 

@@ -10,6 +10,7 @@ import static java.lang.Math.*;
 class IncorrectPlace extends Exception {
     /**
      * Constructor for exception with string message
+     *
      * @param errorMessage - error message
      */
     public IncorrectPlace(String errorMessage) {
@@ -192,11 +193,11 @@ class State {
     /**
      * Constructor that sets all variables.
      *
-     * @param currentX      - position x
-     * @param currentY      - position y
-     * @param cask           - cask flag
+     * @param currentX     - position x
+     * @param currentY     - position y
+     * @param cask         - cask flag
      * @param krakenIsDead - kraken death flag
-     * @param pathLength    - length of path from begin to end
+     * @param pathLength   - length of path from begin to end
      */
     State(int currentX, int currentY, boolean cask, boolean krakenIsDead, int pathLength) {
         this(currentX, currentY);
@@ -219,6 +220,7 @@ class State {
 
     /**
      * Getter for x coordinate
+     *
      * @return x coordinate
      */
     int getX() {
@@ -227,6 +229,7 @@ class State {
 
     /**
      * Getter for y coordinate
+     *
      * @return y coordinate
      */
     int getY() {
@@ -361,11 +364,16 @@ class Board {
         }
         setRock(Rock.getX(), Rock.getY());
 
+        board[Jack.getX()][Jack.getY()] = Constants.BLANK;
         Tuple<Integer> Tortuga = arr.get(5);
-        if (isOccupied(Tortuga.getX(), Tortuga.getY()) || isPerceptionCell(Tortuga.getX(), Tortuga.getY())) {
+        if ((isOccupied(Tortuga.getX(), Tortuga.getY())) || isPerceptionCell(Tortuga.getX(), Tortuga.getY())) {
             throw new IncorrectPlace("Tortuga invalid place");
         }
         setTortuga(Tortuga.getX(), Tortuga.getY());
+        int jX = Jack.getX(), jY = Jack.getY(), tX = Tortuga.getX(), tY = Tortuga.getY();
+        if (jX != tX && jY != tY) {
+            board[Jack.getX()][Jack.getY()] = Constants.PLAYER;
+        }
 
         Tuple<Integer> Chest = arr.get(4);
         if (isOccupied(Chest.getX(), Chest.getY()) || isPerceptionCell(Chest.getX(), Chest.getY())) {
@@ -497,12 +505,16 @@ class Board {
         }
         setRock(x, y);
 
+        board[from_x][from_y] = Constants.BLANK;
         // set tortuga
         while (isOccupied(x, y) || isPerceptionCell(x, y)) {
             x = randInRange(rows);
             y = randInRange(columns);
         }
         setTortuga(x, y);
+        if (x != from_x && y != from_y) {
+            board[from_x][from_y] = Constants.PLAYER;
+        }
 
         // set Chest
         while (isOccupied(x, y) || isPerceptionCell(x, y)) {
@@ -692,6 +704,7 @@ abstract class SearchAlgorithm {
 
     /**
      * Getter for scenario
+     *
      * @return scenario number
      */
     public int getScenario() {
@@ -788,7 +801,9 @@ abstract class SearchAlgorithm {
      *
      * @return path length
      */
-    abstract int getPathLength();
+    int getPathLength() {
+        return pathLength;
+    }
 }
 
 /**
@@ -857,11 +872,13 @@ class Result {
 class AStar extends SearchAlgorithm {
     /**
      * Constructor for A* algorithm
+     *
      * @param scenario number of scenario
      */
     AStar(int scenario) {
         this.scenario = scenario;
     }
+
     /**
      * Node for priority queue that can be compared by f = g + h and h, where h - heuristics, g - amount of steps from begin.
      * Also, node has state inside.
@@ -1014,14 +1031,13 @@ class AStar extends SearchAlgorithm {
 
                 }
             }
-            if(scenario == 2) {
+            if (scenario == 2) {
                 ArrayList<Tuple<Integer>> shifts2 = new ArrayList<>();
                 shifts2.add(new Tuple<>(2, 0));
                 shifts2.add(new Tuple<>(0, 2));
                 shifts2.add(new Tuple<>(-2, 0));
                 shifts2.add(new Tuple<>(0, -2));
-
-                for (Tuple<Integer> shift: shifts2) {
+                for (Tuple<Integer> shift : shifts2) {
                     int new_x = current_x + shift.getX();
                     int new_y = current_y + shift.getY();
 
@@ -1059,11 +1075,13 @@ class AStar extends SearchAlgorithm {
 class BackTracking extends SearchAlgorithm {
     /**
      * Constructor for BackTracking* algorithm
+     *
      * @param scenario number of scenario
      */
     BackTracking(int scenario) {
         this.scenario = scenario;
     }
+
     /**
      * Caller for function that solves the problem when Jack starts from (from_x, from_y) to (finish_x, finish_y).
      *
@@ -1155,19 +1173,21 @@ class BackTracking extends SearchAlgorithm {
 
             }
         }
-        if(scenario == 2) {
+        if (scenario == 2) {
             ArrayList<Tuple<Integer>> shifts2 = new ArrayList<>();
             shifts2.add(new Tuple<>(2, 0));
             shifts2.add(new Tuple<>(0, 2));
             shifts2.add(new Tuple<>(-2, 0));
             shifts2.add(new Tuple<>(0, -2));
 
-            for(Tuple<Integer> shift: shifts2) {
+            for (Tuple<Integer> shift : shifts2) {
                 int new_x = current_x + shift.getX();
                 int new_y = current_y + shift.getY();
 
-                int checkX = current_x + shift.getX() / 2;;
-                int checkY = current_x + shift.getY() / 2;;
+                int checkX = current_x + shift.getX() / 2;
+                ;
+                int checkY = current_x + shift.getY() / 2;
+                ;
 
                 if (!board.isValidCoordinates(new_x, new_y)) {
                     continue;
@@ -1177,7 +1197,7 @@ class BackTracking extends SearchAlgorithm {
                 }
 
                 if ((board.isKrakenCell(new_x, new_y) && state.krakenIsDead) || !board.isEnemy(new_x, new_y)) {
-                    if((board.isKrakenCell(checkX, checkY) && state.krakenIsDead) || !board.isEnemy(checkX, checkY)) {
+                    if ((board.isKrakenCell(checkX, checkY) && state.krakenIsDead) || !board.isEnemy(checkX, checkY)) {
                         if (map[new_x][new_y] > state.pathLength + 2) {
                             State newState = state.move(new_x, new_y);
                             newState.pathLength += 1;
@@ -1203,10 +1223,7 @@ class BackTracking extends SearchAlgorithm {
 /**
  * Entry point class of program.
  */
-public class Main {
-//    FileWriter fileWriter;
-//    PrintWriter printWriter;
-
+public class AntonNekhaev {
     /**
      * Supporting function for printing map.
      *
@@ -1286,8 +1303,6 @@ public class Main {
 
         if (direct.getPathLength() == Constants.INF &&
                 (toTortuga.getPathLength() == Constants.INF || fromTortugaToFinish.getPathLength() == Constants.INF)) {
-            System.out.print("Lose\n");
-//            printWriter.printf("%d L\n", ans_time);
             return;
         }
 
@@ -1310,7 +1325,6 @@ public class Main {
         char[][] pathMap = getPathMap(ans_path, board.rows, board.columns);
         printMap(pathMap);
         System.out.printf("%f ms\n", (double) ans_time / 1e6);
-//        printWriter.printf("%d W\n", ans_time);
     }
 
     /**
@@ -1321,7 +1335,7 @@ public class Main {
      */
     public static void main(String[] args) throws FileNotFoundException {
         PrintStream stdout = System.out;
-        Main m = new Main();
+        AntonNekhaev m = new AntonNekhaev();
         Scanner in = new Scanner(System.in);
         int inputType = 3;
         do {

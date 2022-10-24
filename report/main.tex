@@ -36,6 +36,16 @@
     \item[] Sensors - spyglass (depends on scenario), compass
 \end{enumerate}
 
+\section{Properties of the enviroment}
+\begin{enumerate}
+    \item[] Partially Observable - Jack Sparrow can see only in his perception zone.
+    \item[] Single Agent - only agent can move on the map, other entities are static.
+    \item[] Sequential - the current decision has consequences on future actions, so, if Jack has killed the Kraken he can move in Kraken's coordinates without damage.
+    \item[] Dynamic - agent can change the enviroment by killing Kraken.
+    \item[] Discrete - Jack Sparrow makes discreate steps from cell to cell.
+    \item[] Known - our agent has a compass, so he knows where Dead Man's Chest and Tortuga Island are located.
+\end{enumerate}
+
 \section{Search algorithms}
 \subsection{Backtracking search}
 Backtracking search tries all paths and finds for shortest one. For the implementation I use recursive approach. Also I have a two dimensional array - \emph{map} with capacity $9 \times 9$, cell with index $(x,y)$ corresponds to the minimal length of path that needed to get to this coordinate. So, thanks to presence of map array we can make a optimization of algorithm: if on one step current path to $(x, y)$ coordinate is greater than value of \emph{map}$[x][y]$ then we can exit from this recursion leaf because every other path in this recursion branch will be greater that path that we have obtain on previous steps. Recursion ends when can not make move to another cell or speaking in another words: we can not make solution for adjacent cells better than already exists.
@@ -92,7 +102,7 @@ In this subsection there are maps (without their variations) that can not be sol
     \item [(d)] -- Instance death for Jack Sparrow.
 \end{enumerate}
 \section{Statistical Analysis}
-The analysis is based on 1000 randomly generated maps, each of which satisfies the task conditions. Let's compare!
+The analysis is based on 1000 runs of program, each program executes algoritms in 2 scenarios, that generate random map, each of which satisfies the task conditions. Let's compare!
 \subsection*{Backtracking compared to A*} 
 
 \begin{center}
@@ -102,20 +112,20 @@ The analysis is based on 1000 randomly generated maps, each of which satisfies t
     \hline
     Scenario number&\multicolumn{2}{|c|}{1} & \multicolumn{2}{|c|}{2}\\
     \hline
-    Mean of time for execution (ms)& 0.44 & 0.014 &0.787& 0.024\\
-    Mode of time for execution (ms) & 0.35  & 0.01&0.610& 0.01\\
-    Median of time for execution (ms)& 0.348 & 0.011&0.616& 0.018\\
-    Standard deviation of time for execution (ms) & 0.913 & 0.025&1.575& 0.041\\
+    Mean of time for execution (ms)& 3.647 & 0.694 &2.627& 0.306\\
+    Mode of time for execution (ms) & 3.62  & 0.63&2.64& 0.29\\
+    Median of time for execution (ms)& 3.629 & 0.677&2.666& 0.296\\
+    Standard deviation of time for execution (ms) & 3.662 & 0.712&2.674& 0.329\\
     \hline
-    Number of wins & \multicolumn{4}{|c|}{954} \\
-    Number of loses & \multicolumn{4}{|c|}{46}  \\
-    Percentage of wins & \multicolumn{4}{|c|}{95.4\%} \\
-    Percentage of loses & \multicolumn{4}{|c|}{4.6\%} \\
+    Number of wins & \multicolumn{4}{|c|}{942} \\
+    Number of loses & \multicolumn{4}{|c|}{58}  \\
+    Percentage of wins & \multicolumn{4}{|c|}{94.2\%} \\
+    Percentage of loses & \multicolumn{4}{|c|}{5.8\%} \\
     \hline
 \end{tabular}
 \end{center}
 As we see from the table A* solves this problem in less time than Backtracking in both scenarios, but algorithms show themselves the same when finding a path (if one algorithm finds a path, the second will find it too).\\
-Also notable, if you compare the speed of the algorithm under different scenarios, you can see that the first scenario works faster than the second.
+Also notable, if you compare the speed of the algorithm under different scenarios, you can see that the second scenario works faster than the first.
 
 \section{Source code}
 Java source code, together with files and python script for statistics are available on my Github repository, the \href{https://github.com/NAD777/AI-assignment-1}{link} (just click on it).
