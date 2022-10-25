@@ -5,6 +5,209 @@ import java.util.regex.Pattern;
 import static java.lang.Math.*;
 
 /**
+ * Entry point class of program.
+ */
+public class AntonNekhaev {
+    /**
+     * Supporting function for printing map.
+     *
+     * @param map 2 dimensional array
+     */
+    private void printMap(char[][] map) {
+        System.out.print("-------------------\n");
+        System.out.print("  ");
+        for (int i = 0; i < map.length; i++) {
+            System.out.printf("%d ", i);
+        }
+        System.out.print("\n");
+        for (int i = 0; i < map.length; i++) {
+            System.out.printf("%d ", i);
+            for (int j = 0; j < map[0].length; j++) {
+                System.out.printf("%c ", map[i][j]);
+            }
+            System.out.print("\n");
+        }
+        System.out.print("-------------------\n");
+    }
+
+    /**
+     * Supporing function for generation answer map with path.
+     *
+     * @param path    - array of coordinates of path
+     * @param rows    - amount of rows
+     * @param columns - amount of columns
+     * @return new generated map with path
+     */
+    private char[][] getPathMap(ArrayList<Tuple<Integer>> path, int rows, int columns) {
+        char[][] ans_map = new char[rows][columns];
+        for (int i = 0; i < rows; i++) {
+            for (int j = 0; j < columns; j++) {
+                ans_map[i][j] = Constants.BLANK;
+            }
+        }
+        for (Tuple<Integer> integerTuple : path) {
+            int x = integerTuple.getX();
+            int y = integerTuple.getY();
+            ans_map[x][y] = Constants.PATH;
+        }
+        return ans_map;
+    }
+
+    /**
+     * Method that solves the problem with some board and search algorithm.
+     * We solve problem in two ways:
+     * 1 - direct path to Dead Men's chest
+     * 2 - go to Tortuga and then to Dead Men's chest
+     * This function executes in two ways and chose the way with the least path length.
+     *
+     * @param board     - arbitrary board
+     * @param algorithm - Backtracking or A* instance of class
+     */
+    void solve(Board board, SearchAlgorithm algorithm) {
+        ArrayList<Tuple<Integer>> shifts = new ArrayList<>();
+
+        shifts.add(new Tuple<>(1, 0));
+        shifts.add(new Tuple<>(-1, 0));
+        shifts.add(new Tuple<>(0, 1));
+        shifts.add(new Tuple<>(0, -1));
+
+        shifts.add(new Tuple<>(1, 1));
+        shifts.add(new Tuple<>(-1, 1));
+        shifts.add(new Tuple<>(-1, -1));
+        shifts.add(new Tuple<>(1, -1));
+
+        // direct path to chest
+        Result direct = algorithm.solve(board.from_x, board.from_y, board.finish_x, board.finish_y, shifts, board);
+
+        // through Tortuga
+        Result toTortuga = algorithm.solve(board.from_x, board.from_y, board.tortuga_x, board.tortuga_y, shifts, board);
+        Result fromTortugaToFinish = algorithm.solve(board.tortuga_x, board.tortuga_y, board.finish_x, board.finish_y, shifts, board);
+
+        long ans_time = direct.getAmountTimeForExecution() + toTortuga.getAmountTimeForExecution() + fromTortugaToFinish.getAmountTimeForExecution();
+
+        if (direct.getPathLength() == Constants.INF &&
+                (toTortuga.getPathLength() == Constants.INF || fromTortugaToFinish.getPathLength() == Constants.INF)) {
+            System.out.print("Lose");
+            return;
+        }
+
+        ArrayList<Tuple<Integer>> ans_path;
+
+        if (direct.getPathLength() < toTortuga.getPathLength() + fromTortugaToFinish.getPathLength()) {
+            ans_path = direct.getPath();
+        } else {
+            ans_path = toTortuga.getPath();
+            ans_path.remove(ans_path.size() - 1);
+            ans_path.addAll(fromTortugaToFinish.getPath());
+        }
+
+        System.out.printf("Win\n%d\n", ans_path.size() - 1);
+        for (Tuple<Integer> integerTuple : ans_path) {
+            System.out.printf("[%d,%d] ", integerTuple.getX(), integerTuple.getY());
+        }
+        System.out.print("\n");
+        char[][] pathMap = getPathMap(ans_path, board.rows, board.columns);
+        printMap(pathMap);
+        System.out.printf("%f ms\n", (double) ans_time / 1e6);
+    }
+
+    /**
+     * Entry point function of program. Provide user interface, parsing for coordinates and perception scenario, validating input.
+     *
+     * @param args - arguments from command line (is not used in this program)
+     * @throws FileNotFoundException if outputAStar.txt or outputBacktracking.txt if there are do not exist
+     */
+    public static void main(String[] args) throws FileNotFoundException {
+        PrintStream stdout = System.out;
+        AntonNekhaev m = new AntonNekhaev();
+        Scanner in = new Scanner(System.in);
+        int inputType = 3;
+        do {
+            System.out.print("Select option for map:\n1 - for random generation\n2 - read from input.txt\n");
+            System.out.print("> ");
+            try {
+                inputType = in.nextInt();
+            } catch (InputMismatchException e) {
+                System.out.print("Error: Not a number\n");
+                continue;
+            }
+
+            if (inputType != 1 && inputType != 2) {
+                System.out.print("Error: Incorrect input\n");
+            }
+        } while (inputType != 1 && inputType != 2);
+        int perceptionScenario;
+        if (inputType == 1) {
+            do {
+                System.out.print("Enter perception scenario from console (1 or 2):\n");
+                System.out.print("> ");
+                perceptionScenario = in.nextInt();
+                if (perceptionScenario != 1 && perceptionScenario != 2) {
+                    System.out.print("Error: Incorrect input\n");
+                }
+            } while (perceptionScenario != 1 && perceptionScenario != 2);
+            Board board = new Board(9, 9);
+
+            System.setOut(new PrintStream("outputAStar.txt"));
+            m.solve(board, new AStar(perceptionScenario));
+            System.setOut(new PrintStream("outputBacktracking.txt"));
+            m.solve(board, new BackTracking(perceptionScenario));
+            System.setOut(stdout);
+            return;
+        }
+        Scanner scannerInput;
+        try {
+            scannerInput = new Scanner(new File("input.txt"));
+        } catch (IOException e) {
+            System.out.print("Error: No input.txt file");
+            return;
+        }
+        String coords = "";
+        try {
+            coords = scannerInput.nextLine();
+        } catch (Exception e) {
+            System.out.print("Error: Wrong coordinates in input.txt");
+            return;
+        }
+        if (!Pattern.matches("^(\\[\\d,\\d]\\s){5}\\[\\d,\\d]$", coords)) {
+            System.out.print("Error: Wrong coordinates in input.txt\n");
+            return;
+        }
+        try {
+            perceptionScenario = scannerInput.nextInt();
+            if (!(perceptionScenario == 1 || perceptionScenario == 2)) {
+                throw new InputMismatchException();
+            }
+        } catch (Exception e) {
+            System.out.print("Error: Wrong perception scenario in input.txt\n");
+            return;
+        }
+
+        ArrayList<Tuple<Integer>> coordinates = new ArrayList<>();
+        for (String token : coords.split(" ")) {
+            token = token.replace("[", "");
+            token = token.replace("]", "");
+
+            String[] digits = token.split(",");
+            coordinates.add(new Tuple<>(Integer.parseInt(digits[0]), Integer.parseInt(digits[1])));
+        }
+
+        Board board;
+        try {
+            board = new Board(9, 9, coordinates);
+        } catch (IncorrectPlace e) {
+            System.out.print(e.getMessage());
+            return;
+        }
+        System.setOut(new PrintStream("outputAStar.txt"));
+        m.solve(board, new AStar(perceptionScenario));
+        System.setOut(new PrintStream("outputBacktracking.txt"));
+        m.solve(board, new BackTracking(perceptionScenario));
+        System.setOut(stdout);
+    }
+}
+
+/**
  * New exception in situation when Actors want to be in the cells that are occupied by the condition of the task.
  */
 class IncorrectPlace extends Exception {
@@ -807,6 +1010,7 @@ abstract class SearchAlgorithm {
 
     /**
      * Funtion that make attempt to kill Kraken based on current state
+     *
      * @param state current state of game
      */
     void tryKillKraken(State state) {
@@ -1212,208 +1416,5 @@ class BackTracking extends SearchAlgorithm {
     @Override
     public int getPathLength() {
         return pathLength;
-    }
-}
-
-/**
- * Entry point class of program.
- */
-public class AntonNekhaev {
-    /**
-     * Supporting function for printing map.
-     *
-     * @param map 2 dimensional array
-     */
-    private void printMap(char[][] map) {
-        System.out.print("-------------------\n");
-        System.out.print("  ");
-        for (int i = 0; i < map.length; i++) {
-            System.out.printf("%d ", i);
-        }
-        System.out.print("\n");
-        for (int i = 0; i < map.length; i++) {
-            System.out.printf("%d ", i);
-            for (int j = 0; j < map[0].length; j++) {
-                System.out.printf("%c ", map[i][j]);
-            }
-            System.out.print("\n");
-        }
-        System.out.print("-------------------\n");
-    }
-
-    /**
-     * Supporing function for generation answer map with path.
-     *
-     * @param path    - array of coordinates of path
-     * @param rows    - amount of rows
-     * @param columns - amount of columns
-     * @return new generated map with path
-     */
-    private char[][] getPathMap(ArrayList<Tuple<Integer>> path, int rows, int columns) {
-        char[][] ans_map = new char[rows][columns];
-        for (int i = 0; i < rows; i++) {
-            for (int j = 0; j < columns; j++) {
-                ans_map[i][j] = Constants.BLANK;
-            }
-        }
-        for (Tuple<Integer> integerTuple : path) {
-            int x = integerTuple.getX();
-            int y = integerTuple.getY();
-            ans_map[x][y] = Constants.PATH;
-        }
-        return ans_map;
-    }
-
-    /**
-     * Method that solves the problem with some board and search algorithm.
-     * We solve problem in two ways:
-     * 1 - direct path to Dead Men's chest
-     * 2 - go to Tortuga and then to Dead Men's chest
-     * This function executes in two ways and chose the way with the least path length.
-     *
-     * @param board     - arbitrary board
-     * @param algorithm - Backtracking or A* instance of class
-     */
-    void solve(Board board, SearchAlgorithm algorithm) {
-        ArrayList<Tuple<Integer>> shifts = new ArrayList<>();
-
-        shifts.add(new Tuple<>(1, 0));
-        shifts.add(new Tuple<>(-1, 0));
-        shifts.add(new Tuple<>(0, 1));
-        shifts.add(new Tuple<>(0, -1));
-
-        shifts.add(new Tuple<>(1, 1));
-        shifts.add(new Tuple<>(-1, 1));
-        shifts.add(new Tuple<>(-1, -1));
-        shifts.add(new Tuple<>(1, -1));
-
-        // direct path to chest
-        Result direct = algorithm.solve(board.from_x, board.from_y, board.finish_x, board.finish_y, shifts, board);
-
-        // through Tortuga
-        Result toTortuga = algorithm.solve(board.from_x, board.from_y, board.tortuga_x, board.tortuga_y, shifts, board);
-        Result fromTortugaToFinish = algorithm.solve(board.tortuga_x, board.tortuga_y, board.finish_x, board.finish_y, shifts, board);
-
-        long ans_time = direct.getAmountTimeForExecution() + toTortuga.getAmountTimeForExecution() + fromTortugaToFinish.getAmountTimeForExecution();
-
-        if (direct.getPathLength() == Constants.INF &&
-                (toTortuga.getPathLength() == Constants.INF || fromTortugaToFinish.getPathLength() == Constants.INF)) {
-            System.out.print("Lose");
-            return;
-        }
-
-        ArrayList<Tuple<Integer>> ans_path;
-
-        if (direct.getPathLength() < toTortuga.getPathLength() + fromTortugaToFinish.getPathLength()) {
-            ans_path = direct.getPath();
-        } else {
-            ans_path = toTortuga.getPath();
-            ans_path.remove(ans_path.size() - 1);
-            ans_path.addAll(fromTortugaToFinish.getPath());
-        }
-
-        System.out.printf("Win\n%d\n", ans_path.size() - 1);
-        for (Tuple<Integer> integerTuple : ans_path) {
-            System.out.printf("[%d,%d] ", integerTuple.getX(), integerTuple.getY());
-        }
-        System.out.print("\n");
-        char[][] pathMap = getPathMap(ans_path, board.rows, board.columns);
-        printMap(pathMap);
-        System.out.printf("%f ms\n", (double) ans_time / 1e6);
-    }
-
-    /**
-     * Entry point function of program. Provide user interface, parsing for coordinates and perception scenario, validating input.
-     *
-     * @param args - arguments from command line (is not used in this program)
-     * @throws FileNotFoundException if outputAStar.txt or outputBacktracking.txt if there are do not exist
-     */
-    public static void main(String[] args) throws FileNotFoundException {
-        PrintStream stdout = System.out;
-        AntonNekhaev m = new AntonNekhaev();
-        Scanner in = new Scanner(System.in);
-        int inputType = 3;
-        do {
-            System.out.print("Select option for map:\n1 - for random generation\n2 - read from input.txt\n");
-            System.out.print("> ");
-            try {
-                inputType = in.nextInt();
-            } catch (InputMismatchException e) {
-                System.out.print("Error: Not a number\n");
-                continue;
-            }
-
-            if (inputType != 1 && inputType != 2) {
-                System.out.print("Error: Incorrect input\n");
-            }
-        } while (inputType != 1 && inputType != 2);
-        int perceptionScenario;
-        if (inputType == 1) {
-            do {
-                System.out.print("Enter perception scenario from console (1 or 2):\n");
-                System.out.print("> ");
-                perceptionScenario = in.nextInt();
-                if (perceptionScenario != 1 && perceptionScenario != 2) {
-                    System.out.print("Error: Incorrect input\n");
-                }
-            } while (perceptionScenario != 1 && perceptionScenario != 2);
-            Board board = new Board(9, 9);
-
-            System.setOut(new PrintStream("outputAStar.txt"));
-            m.solve(board, new AStar(perceptionScenario));
-            System.setOut(new PrintStream("outputBacktracking.txt"));
-            m.solve(board, new BackTracking(perceptionScenario));
-            System.setOut(stdout);
-            return;
-        }
-        Scanner scannerInput;
-        try {
-            scannerInput = new Scanner(new File("input.txt"));
-        } catch (IOException e) {
-            System.out.print("Error: No input.txt file");
-            return;
-        }
-        String coords = "";
-        try {
-            coords = scannerInput.nextLine();
-        } catch (Exception e) {
-            System.out.print("Error: Wrong coordinates in input.txt");
-            return;
-        }
-        if (!Pattern.matches("^(\\[\\d,\\d]\\s){5}\\[\\d,\\d]$", coords)) {
-            System.out.print("Error: Wrong coordinates in input.txt\n");
-            return;
-        }
-        try {
-            perceptionScenario = scannerInput.nextInt();
-            if (!(perceptionScenario == 1 || perceptionScenario == 2)) {
-                throw new InputMismatchException();
-            }
-        } catch (Exception e) {
-            System.out.print("Error: Wrong perception scenario in input.txt\n");
-            return;
-        }
-
-        ArrayList<Tuple<Integer>> coordinates = new ArrayList<>();
-        for (String token : coords.split(" ")) {
-            token = token.replace("[", "");
-            token = token.replace("]", "");
-
-            String[] digits = token.split(",");
-            coordinates.add(new Tuple<>(Integer.parseInt(digits[0]), Integer.parseInt(digits[1])));
-        }
-
-        Board board;
-        try {
-            board = new Board(9, 9, coordinates);
-        } catch (IncorrectPlace e) {
-            System.out.print(e.getMessage());
-            return;
-        }
-        System.setOut(new PrintStream("outputAStar.txt"));
-        m.solve(board, new AStar(perceptionScenario));
-        System.setOut(new PrintStream("outputBacktracking.txt"));
-        m.solve(board, new BackTracking(perceptionScenario));
-        System.setOut(stdout);
     }
 }
