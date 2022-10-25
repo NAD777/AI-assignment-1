@@ -30,20 +30,20 @@
 
 \section{PEAS of Jack Sparrow}
 \begin{enumerate}
-    \item[] Performance measure - achieving the Dead Man’s Chest with a shortest existed path. 
-    \item[] Environment - matrix $9 \times 9$
-    \item[] Actuators - changing position on map, visiting Tortuga, killing Kraken
-    \item[] Sensors - spyglass (depends on scenario), compass
+    \item[] \textbf{Performance measure} - achieving the Dead Man’s Chest with a shortest existed path. 
+    \item[] \textbf{Environment} - matrix $9 \times 9$
+    \item[] \textbf{Actuators} - changing position on map, visiting Tortuga, killing Kraken
+    \item[] \textbf{Sensors} - spyglass (depends on scenario), compass
 \end{enumerate}
 
-\section{Properties of the enviroment}
+\section{Properties of the environment}
 \begin{enumerate}
-    \item[] Partially Observable - Jack Sparrow can see only in his perception zone.
-    \item[] Single Agent - only agent can move on the map, other entities are static.
-    \item[] Sequential - the current decision has consequences on future actions, so, if Jack has killed the Kraken he can move in Kraken's coordinates without damage.
-    \item[] Dynamic - agent can change the enviroment by killing Kraken.
-    \item[] Discrete - Jack Sparrow makes discreate steps from cell to cell.
-    \item[] Known - our agent has a compass, so he knows where Dead Man's Chest and Tortuga Island are located.
+    \item[] \textbf{Partially Observable} - Jack Sparrow can see only in his perception zone.
+    \item[] \textbf{Single Agent} - only agent can move on the map, other entities are static.
+    \item[] \textbf{Sequential} - the current decision has consequences on future actions, so, if Jack has killed the Kraken he can move in Kraken's coordinates without damage.
+    \item[] \textbf{Dynamic} - agent can change the environment by killing Kraken.
+    \item[] \textbf{Discrete} - Jack Sparrow makes discrete steps from cell to cell.
+    \item[] \textbf{Known} - our agent has a compass, so he knows where Dead Man's Chest and Tortuga Island are located.
 \end{enumerate}
 
 \section{Search algorithms}
