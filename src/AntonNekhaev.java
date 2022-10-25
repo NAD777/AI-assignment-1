@@ -804,6 +804,24 @@ abstract class SearchAlgorithm {
     int getPathLength() {
         return pathLength;
     }
+
+    /**
+     * Funtion that make attempt to kill Kraken based on current state
+     * @param state current state of game
+     */
+    void tryKillKraken(State state) {
+        for (Tuple<Integer> shift : shifts) {
+            int new_x = state.getX() + shift.getX();
+            int new_y = state.getY() + shift.getY();
+            if (!board.isValidCoordinates(new_x, new_y)) {
+                continue;
+            }
+            if (board.isKrakenHeart(new_x, new_y) && state.cask) {
+                state.krakenIsDead = true;
+                break;
+            }
+        }
+    }
 }
 
 /**
@@ -1000,17 +1018,7 @@ class AStar extends SearchAlgorithm {
             }
 
             if (!state.krakenIsDead && state.cask) {
-                for (Tuple<Integer> shift : shifts) {
-                    int new_x = current_x + shift.getX();
-                    int new_y = current_y + shift.getY();
-                    if (!board.isValidCoordinates(new_x, new_y)) {
-                        continue;
-                    }
-                    if (board.isKrakenHeart(new_x, new_y) && state.cask) {
-                        state.krakenIsDead = true;
-                        break;
-                    }
-                }
+                tryKillKraken(state);
             }
 
             for (Tuple<Integer> shift : shifts) {
@@ -1145,17 +1153,7 @@ class BackTracking extends SearchAlgorithm {
         }
 
         if (!state.krakenIsDead && state.cask) {
-            for (Tuple<Integer> shift : shifts) {
-                int new_x = current_x + shift.getX();
-                int new_y = current_y + shift.getY();
-                if (!board.isValidCoordinates(new_x, new_y)) {
-                    continue;
-                }
-                if (board.isKrakenHeart(new_x, new_y) && state.cask) {
-                    state.krakenIsDead = true;
-                    break;
-                }
-            }
+            tryKillKraken(state);
         }
 
         for (Tuple<Integer> shift : shifts) {
@@ -1170,7 +1168,6 @@ class BackTracking extends SearchAlgorithm {
                 if (map[new_x][new_y] > state.pathLength + 1) {
                     backTrackingSearch(state.move(new_x, new_y));
                 }
-
             }
         }
         if (scenario == 2) {
@@ -1185,9 +1182,7 @@ class BackTracking extends SearchAlgorithm {
                 int new_y = current_y + shift.getY();
 
                 int checkX = current_x + shift.getX() / 2;
-                ;
                 int checkY = current_x + shift.getY() / 2;
-                ;
 
                 if (!board.isValidCoordinates(new_x, new_y)) {
                     continue;
@@ -1369,7 +1364,6 @@ public class AntonNekhaev {
             System.setOut(new PrintStream("outputBacktracking.txt"));
             m.solve(board, new BackTracking(perceptionScenario));
             System.setOut(stdout);
-
             return;
         }
         Scanner scannerInput;
